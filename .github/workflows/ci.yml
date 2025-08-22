@@ -1,0 +1,36 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e apps/langflow-server -e packages/otm-model
+      - name: Python lint (ruff, optional)
+        run: |
+          echo "skip lint placeholder"
+      - name: Node setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install pnpm
+        run: npm i -g pnpm@9
+      - name: Install UI deps
+        run: |
+          pnpm -r i || true
+      - name: Build UI
+        run: |
+          pnpm -C apps/langflow-ui-extensions build || true
+

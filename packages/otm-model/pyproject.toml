@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "otm-model"
+version = "0.1.0"
+description = "OTM schema helpers and extensions for Threatflow"
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2",
+  "jsonschema>=4",
+  "semver>=3"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
