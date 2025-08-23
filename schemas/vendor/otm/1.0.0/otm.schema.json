@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/otm/1.0.0/schema",
+  "title": "Open Threat Model (OTM) 1.0.0 - Minimal Snapshot",
+  "type": "object",
+  "required": ["otmVersion", "name"],
+  "properties": {
+    "otmVersion": { "type": "string", "pattern": "^1\\.0\\.0$" },
+    "name": { "type": "string" },
+    "projects": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] } },
+    "trustZones": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" } }, "required": ["id", "name"] } },
+    "components": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "type": { "type": "string" }, "trustZone": { "type": "string" }, "tags": { "type": "array", "items": { "type": "string" } } }, "required": ["id", "name", "type"] } },
+    "dataflows": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "source": { "type": "string" }, "destination": { "type": "string" }, "protocol": { "type": "string" } }, "required": ["id", "source", "destination"] } },
+    "extensions": { "type": "object", "additionalProperties": true }
+  },
+  "additionalProperties": true
+}
+

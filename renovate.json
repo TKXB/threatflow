@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "timezone": "Asia/Shanghai",
+  "rangeStrategy": "replace",
+  "semanticCommits": "enabled",
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "prCreation": "immediate"
+    },
+    {
+      "matchManagers": ["npm", "pnpm", "pip_requirements", "pip_setup"],
+      "groupName": "all minor/patch deps"
+    }
+  ],
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "enabledManagers": ["npm", "pnpm", "pip_requirements", "pip_setup", "github-actions"],
+  "dependencyDashboard": true
+}

@@ -1,0 +1,6 @@
+-e packages/otm-model
+-e apps/langflow-server
+.
+pytest>=8
+ruff>=0.5.0
+mypy>=1.10.0

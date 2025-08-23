@@ -1,0 +1,21 @@
+{
+  "otm": {
+    "version": "1.0.0",
+    "path": "schemas/vendor/otm/1.0.0/otm.schema.json",
+    "source": "pinned snapshot",
+    "sha256": ""
+  },
+  "threat-dragon": {
+    "version": "v2",
+    "path": "schemas/vendor/threat-dragon/v2/td.schema.json",
+    "source": "pinned snapshot",
+    "sha256": ""
+  },
+  "threagile": {
+    "version": "1.0.0",
+    "path": "schemas/vendor/threagile/1.0.0/threagile.schema.json",
+    "source": "pinned snapshot",
+    "sha256": ""
+  }
+}
+

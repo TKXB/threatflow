@@ -1,12 +1,18 @@
 ## Setup & Bootstrap
-- [ ] 初始化 mono-repo 结构与基础工具
-- [ ] 编写 Docker Compose 与本地运行脚本
+- [x] 初始化 mono-repo 结构与基础工具
+- [ ] （已暂缓）编写 Docker Compose 与本地运行脚本
 - [ ] Vendor 上游 OTM/TD/Threagile schemas 并锁版本
-- [ ] 配置 CI：lint/test/contract/e2e 与缓存
-- [ ] 启用 Renovate/Dependabot 自动开 PR
+  - [x] Vendor OTM/TD/Threagile schema 快照
+  - [x] schema-index.json 与校验脚本 scripts/update_schemas.py
+  - [x] tests/vendor：基本存在性与可解析测试
+- [x] 配置 CI：lint/test/contract/e2e 与缓存
+- [x] 启用 Renovate/Dependabot 自动开 PR
 
 ## Core Domain Packages
 - [ ] 开发 otm-model 包：类型校验与 extensions
+  - [x] Pydantic 类型定义（最小集合）
+  - [x] 基于 JSONSchema 的校验函数
+  - [x] 单元测试：最小 OTM 文档通过校验
 - [ ] 开发 adapters：OTM↔Threat Dragon JSON
 - [ ] 开发 adapters：OTM↔Threagile YAML
 - [ ] 开发 rule-engine 与内置规则库
