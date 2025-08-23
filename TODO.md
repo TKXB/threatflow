@@ -13,13 +13,15 @@
   - [x] Pydantic 类型定义（最小集合）
   - [x] 基于 JSONSchema 的校验函数
   - [x] 单元测试：最小 OTM 文档通过校验
-- [ ] 开发 adapters：OTM↔Threat Dragon JSON
-- [ ] 开发 adapters：OTM↔Threagile YAML
-- [ ] 开发 rule-engine 与内置规则库
+- [x] 开发 adapters：OTM↔Threat Dragon JSON
+- [x] 开发 adapters：OTM↔Threagile YAML
+- [x] 开发 rule-engine 与内置规则库
 - [ ] 开发 reporting 模板与 PDF 导出
 
 ## Backend Apps
 - [ ] 开发 langflow-server 基础 API 与组件注册
+  - [ ] 注册后端执行器：OTMValidate、RuleEngineEvaluate、MergeFindings、ThreagileAnalyze
+  - [x] 最小版执行器：DataflowEditor（流程）、TrustZoneManager（边界）
 - [ ] 实现 ThreatDragonImport/Export 组件
 - [ ] 实现 ThreagileImport/Export 组件
 - [ ] 实现 ThreagileAnalyze 组件与报告下载
@@ -28,6 +30,8 @@
 
 ## Frontend (Langflow UI 扩展)
 - [ ] 开发 UI 节点库与属性面板
+- [ ] 新增威胁建模节点：ThreatDragonImport、ThreagileImport、OTMValidate、RuleEngineEvaluate、MergeFindings、RiskHeatmap
+  - [x] 最小版节点：DataflowEditor（流程）、TrustZoneManager（边界）
 - [ ] 写入布局至 extensions.x-threatflow.layout
 
 ## Analysis & Visualization

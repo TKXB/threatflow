@@ -1,0 +1,6 @@
+pydantic>=2
+jmespath>=1.0.1
+otm-model>=0.1.0
+pyyaml>=6
+
+[threagile]

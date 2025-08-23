@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: adapters
+Version: 0.1.0
+Summary: Adapters between OTM and external formats (Threat Dragon, Threagile)
+Requires-Python: >=3.10
+Requires-Dist: otm-model>=0.1.0
+Requires-Dist: pydantic>=2

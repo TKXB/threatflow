@@ -15,7 +15,8 @@
   },
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "verify:nodes": "node ./scripts/verify_nodes.mjs"
   }
 }
 

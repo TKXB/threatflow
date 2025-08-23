@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: threatflow-langflow-server
+Version: 0.1.0
+Summary: Threatflow Langflow server extensions (FastAPI, OTM, adapters)
+Requires-Python: >=3.10
+Requires-Dist: fastapi>=0.110
+Requires-Dist: uvicorn[standard]>=0.27
+Requires-Dist: pydantic>=2
+Requires-Dist: jsonschema>=4
+Requires-Dist: sqlalchemy>=2
+Requires-Dist: asyncpg>=0.29
+Requires-Dist: httpx>=0.27
+Requires-Dist: tenacity>=8
+Requires-Dist: pydantic-settings>=2
+Requires-Dist: langflow<2.0,>=1.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: mypy; extra == "dev"

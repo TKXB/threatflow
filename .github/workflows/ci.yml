@@ -44,5 +44,5 @@ jobs:
           pnpm -C apps/langflow-ui-extensions build || true
       - name: Run tests
         run: |
-          pytest -q
+          pytest -q tests packages/rule-engine/tests
 

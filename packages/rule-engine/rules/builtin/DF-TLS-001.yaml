@@ -1,0 +1,10 @@
+id: DF-TLS-001
+title: 跨域未加密
+description: 跨信任域的数据流使用不安全传输协议
+severity: high
+select: dataflows
+where: "contains(`['http','tcp']`, protocol)"
+message: "数据流 {id} 未加密"
+remediation: 改用 https/tls 或安全隧道
+tags: [network, tls]
+enabled: true

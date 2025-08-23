@@ -1,0 +1,15 @@
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2
+jsonschema>=4
+sqlalchemy>=2
+asyncpg>=0.29
+httpx>=0.27
+tenacity>=8
+pydantic-settings>=2
+langflow<2.0,>=1.0
+
+[dev]
+pytest
+ruff
+mypy
