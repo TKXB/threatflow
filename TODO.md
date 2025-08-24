@@ -32,7 +32,22 @@
 - [ ] 开发 UI 节点库与属性面板
 - [ ] 新增威胁建模节点：ThreatDragonImport、ThreagileImport、OTMValidate、RuleEngineEvaluate、MergeFindings、RiskHeatmap
   - [x] 最小版节点：DataflowEditor（流程）、TrustZoneManager（边界）
-- [ ] 写入布局至 extensions.x-threatflow.layout
+- [x] 写入布局至 extensions.x-threatflow.layout
+  - [ ] 完成 Langflow 节点注册与加载（DataflowEditor/TrustZoneManager）
+    - [ ] 定义节点元数据与表单（名称/分组/IO/配置）
+    - [ ] 导出节点清单与加载入口（manifest）
+    - [ ] 前端对接后端 /components 与 /execute 路由
+    - [ ] 构建并加载扩展，使节点出现在画布
+
+## Langflow 集成（Python 自定义组件）
+- [ ] 实现 DataflowEditor 组件（调用 exec_dataflow_editor 或 /otm/dataflow）
+- [ ] 实现 TrustZoneManager 组件（调用 exec_trustzone_manager 或 /otm/trustzone）
+- [ ] 实现 LayoutWriter 组件（调用 exec_layout_writer 或 /components/LayoutWriter/execute）
+- [ ] 实现 OTMValidate 组件（基于 otm_model.validate）
+- [ ] 实现 RuleEngineEvaluate 组件（基于 rule-engine + 内置规则）
+- [ ] 实现 ThreatDragonImport/Export 组件（基于 adapters）
+- [ ] 实现 ThreagileImport/Export 组件（基于 adapters）
+- [ ] 文档：在 Langflow 中加载自定义 Python 组件（上传/扫描路径/示例）
 
 ## Analysis & Visualization
 - [ ] 实现 RiskCalculator 与 RiskHeatmap
