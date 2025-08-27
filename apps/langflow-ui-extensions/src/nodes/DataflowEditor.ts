@@ -6,20 +6,14 @@ export type DataflowOp = {
   id?: string;
 };
 
+import { executeNode } from "../api";
+
 export async function dataflowEditor(
   baseUrl: string,
   otm: OTMDocument,
   op: DataflowOp
 ): Promise<OTMDocument> {
-  const res = await fetch(`${baseUrl}/otm/dataflow`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ otm, op }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`dataflowEditor failed: ${res.status} ${text}`);
-  }
-  return (await res.json()) as OTMDocument;
+  const resp = await executeNode(baseUrl, "DataflowEditor", otm, op);
+  return resp as OTMDocument;
 }
 

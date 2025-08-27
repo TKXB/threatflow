@@ -5,7 +5,9 @@ from typing import Any, Dict
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from pathlib import Path
 
 from .executors import exec_dataflow_editor, exec_trustzone_manager
 from .components import registry
@@ -24,6 +26,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve UI extensions static files (manifest and bundle)
+try:
+    dist_dir = Path(__file__).resolve().parents[4] / "apps" / "langflow-ui-extensions" / "dist"
+    if dist_dir.exists():
+        app.mount("/ui-extensions", StaticFiles(directory=str(dist_dir)), name="ui-extensions")
+except Exception:
+    # Optional: ignore errors when path is not available in certain environments
+    pass
 
 
 @app.post("/otm/dataflow")

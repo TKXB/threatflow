@@ -27,6 +27,9 @@ import json
 from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.io import DataInput, MessageTextInput, Output
 from langflow.schema.data import Data
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DataflowEditorComponent(CustomComponent):
@@ -69,10 +72,41 @@ class DataflowEditorComponent(CustomComponent):
                 op = json.loads(op)
             except Exception:
                 pass
+        # 调试日志：输入摘要
+        try:
+            otm_keys = list(otm.keys())[:5] if isinstance(otm, dict) else None
+            op_keys = list(op.keys())[:5] if isinstance(op, dict) else None
+            logger.debug(
+                "DataflowEditor.execute_dataflow inputs | baseUrl=%s | otm_type=%s keys=%s | op_type=%s keys=%s",
+                baseUrl,
+                type(otm).__name__,
+                otm_keys,
+                type(op).__name__,
+                op_keys,
+            )
+        except Exception:
+            pass
+
         with httpx.Client(timeout=30) as client:
-            r = client.post(f"{baseUrl}/components/DataflowEditor/execute", json={"otm": otm, "op": op})
+            url = f"{baseUrl}/components/DataflowEditor/execute"
+            logger.info("POST %s", url)
+            r = client.post(url, json={"otm": otm, "op": op})
+            logger.info("POST %s -> %s", url, r.status_code)
             r.raise_for_status()
-            return Data(data=r.json())
+            try:
+                resp = r.json()
+                if isinstance(resp, dict):
+                    logger.debug("response keys=%s (count=%d)", list(resp.keys())[:10], len(resp))
+                    self.status = f"OK {r.status_code} keys={len(resp)}"
+                else:
+                    logger.debug("response type=%s", type(resp).__name__)
+                    self.status = f"OK {r.status_code} type={type(resp).__name__}"
+                return Data(data=resp)
+            except Exception:
+                text = r.text
+                logger.warning("response is not JSON, len(text)=%d", len(text) if text else 0)
+                self.status = f"OK {r.status_code} non-json len={len(text) if text else 0}"
+                return Data(data={"raw": text})
 
     async def build_results(self):
         """异步构建方法，返回结果和工件。"""

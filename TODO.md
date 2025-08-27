@@ -34,9 +34,9 @@
   - [x] 最小版节点：DataflowEditor（流程）、TrustZoneManager（边界）
 - [x] 写入布局至 extensions.x-threatflow.layout
   - [ ] 完成 Langflow 节点注册与加载（DataflowEditor/TrustZoneManager）
-    - [ ] 定义节点元数据与表单（名称/分组/IO/配置）
-    - [ ] 导出节点清单与加载入口（manifest）
-    - [ ] 前端对接后端 /components 与 /execute 路由
+    - [x] 定义节点元数据与表单（名称/分组/IO/配置）
+    - [x] 导出节点清单与加载入口（manifest）
+    - [x] 前端对接后端 /components 与 /execute 路由
     - [ ] 构建并加载扩展，使节点出现在画布
 
 ## Langflow 集成（Python 自定义组件）
