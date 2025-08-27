@@ -22,9 +22,9 @@
 - [ ] 开发 langflow-server 基础 API 与组件注册
   - [ ] 注册后端执行器：OTMValidate、RuleEngineEvaluate、MergeFindings、ThreagileAnalyze
   - [x] 最小版执行器：DataflowEditor（流程）、TrustZoneManager（边界）
-- [ ] 实现 ThreatDragonImport/Export 组件
-- [ ] 实现 ThreagileImport/Export 组件
-- [ ] 实现 ThreagileAnalyze 组件与报告下载
+- [x] 实现 ThreatDragonImport/Export 组件（基础实现）
+- [x] 实现 ThreagileImport/Export 组件（基础实现）
+- [ ] 实现 ThreagileAnalyze 组件与报告下载（分析已实现，报告下载待做）
 - [ ] 开发 orchestrator 作业路由与重试
 - [ ] 封装 threagile-service 为 REST
 
@@ -48,6 +48,25 @@
 - [ ] 实现 ThreatDragonImport/Export 组件（基于 adapters）
 - [ ] 实现 ThreagileImport/Export 组件（基于 adapters）
 - [ ] 文档：在 Langflow 中加载自定义 Python 组件（上传/扫描路径/示例）
+
+### 组件连线与端口定义（新增）
+- [ ] 为 Threatflow 自定义组件补齐 Langflow 端口定义（inputs/outputs），使其可在画布连线传递 OTM/结果
+  - 背景：仅有 field_config 只能渲染表单，无法生成可接线端口；需在类上显式声明 `inputs`/`outputs`
+  - 规范：使用 `langflow.io` 的输入/输出类（如 `MultilineInput`/`DictInput`/`DataInput`、`Output`）
+  - DataflowEditorComponent：
+    - inputs：`baseUrl`（string）、`otm`（dict/Data）、`op`（dict/Data）
+    - outputs：`otm_out` → 指向 `build` 返回（OTM dict）
+  - TrustZoneManagerComponent：
+    - inputs：`baseUrl`、`otm`、`op`
+    - outputs：`otm_out`（OTM dict）
+  - LayoutWriterComponent：
+    - inputs：`baseUrl`、`otm`、`op`
+    - outputs：`otm_out`（OTM dict，含 `extensions.x-threatflow.layout`）
+  - OTMValidateComponent：
+    - inputs：`baseUrl`、`otm`、`schema`（可选）
+    - outputs：`result_out`（校验结果，形如 `{ "ok": true }`）
+  - 注意：连线值应覆盖表单值；如使用 `MultilineInput` 传 JSON 字符串，需在 `build` 内解析为 dict
+  - 同步更新：`scripts/publish_langflow_components.py` 注入的组件代码需包含上述 `inputs`/`outputs` 定义
 
 ## Analysis & Visualization
 - [ ] 实现 RiskCalculator 与 RiskHeatmap

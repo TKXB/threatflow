@@ -1,0 +1,27 @@
+{
+  "add_dataflow": {
+    "action": "add",
+    "dataflow": {
+      "id": "DF2",
+      "source": "C2",
+      "destination": "C1",
+      "protocol": "gRPC"
+    }
+  },
+  "remove_dataflow": {
+    "action": "remove",
+    "id": "DF1"
+  },
+  "assign_trustzone": {
+    "action": "assign",
+    "componentId": "C2",
+    "trustZoneId": "TZ1"
+  },
+  "layout_set": {
+    "action": "set",
+    "layout": {
+      "nodes": [],
+      "edges": []
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "otmVersion": "1.0.0",
+  "name": "Sample Threatflow OTM",
+  "projects": [
+    { "name": "Sample Project" }
+  ],
+  "trustZones": [
+    { "id": "TZ1", "name": "Default Zone" }
+  ],
+  "components": [
+    { "id": "C1", "name": "ComponentA", "type": "service", "trustZone": "TZ1", "tags": [] },
+    { "id": "C2", "name": "ComponentB", "type": "database", "trustZone": "TZ1", "tags": [] }
+  ],
+  "dataflows": [
+    { "id": "DF1", "source": "C1", "destination": "C2", "protocol": "HTTP" }
+  ],
+  "threats": [],
+  "mitigations": [],
+  "risks": [],
+  "extensions": {
+    "x-threatflow": {
+      "layout": {}
+    }
+  }
+}

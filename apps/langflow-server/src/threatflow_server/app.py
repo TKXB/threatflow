@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -46,6 +47,9 @@ class ExecRequest(BaseModel):
 
 
 @app.post("/components/{comp_id}/execute")
-def api_execute_component(comp_id: str, req: ExecRequest) -> Dict[str, Any]:
-    return registry.execute(comp_id, req.otm, req.op)
+def api_execute_component(comp_id: str, req: ExecRequest):
+    result = registry.execute(comp_id, req.otm, req.op)
+    if isinstance(result, str):
+        return PlainTextResponse(result)
+    return result
 

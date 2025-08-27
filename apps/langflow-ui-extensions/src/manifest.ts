@@ -81,6 +81,109 @@ export const manifest: ExtensionManifest = {
         required: ["baseUrl", "action"],
       },
     },
+    {
+      id: "OTMValidate",
+      name: "OTM Validate",
+      category: "OTM",
+      inputs: ["otm"],
+      outputs: ["json"],
+      configSchema: {
+        type: "object",
+        properties: {
+          baseUrl: { type: "string", default: "http://127.0.0.1:8889" },
+          schema: { type: "string", default: "" },
+        },
+        required: ["baseUrl"],
+      },
+    },
+    {
+      id: "RuleEngineEvaluate",
+      name: "Rule Engine Evaluate",
+      category: "Analysis",
+      inputs: ["otm"],
+      outputs: ["json"],
+      configSchema: {
+        type: "object",
+        properties: {
+          baseUrl: { type: "string", default: "http://127.0.0.1:8889" },
+          rules_dir: { type: "string", default: "" },
+        },
+        required: ["baseUrl"],
+      },
+    },
+    {
+      id: "ThreatDragonImport",
+      name: "Threat Dragon Import",
+      category: "Interop",
+      inputs: ["json"],
+      outputs: ["otm"],
+      configSchema: {
+        type: "object",
+        properties: {
+          baseUrl: { type: "string", default: "http://127.0.0.1:8889" },
+          td: { type: "object", default: {} },
+        },
+        required: ["baseUrl"],
+      },
+    },
+    {
+      id: "ThreatDragonExport",
+      name: "Threat Dragon Export",
+      category: "Interop",
+      inputs: ["otm"],
+      outputs: ["json"],
+      configSchema: {
+        type: "object",
+        properties: {
+          baseUrl: { type: "string", default: "http://127.0.0.1:8889" },
+        },
+        required: ["baseUrl"],
+      },
+    },
+    {
+      id: "ThreagileImport",
+      name: "Threagile Import",
+      category: "Interop",
+      inputs: ["json"],
+      outputs: ["otm"],
+      configSchema: {
+        type: "object",
+        properties: {
+          baseUrl: { type: "string", default: "http://127.0.0.1:8889" },
+          yaml: { type: "string", default: "" },
+        },
+        required: ["baseUrl"],
+      },
+    },
+    {
+      id: "ThreagileExport",
+      name: "Threagile Export",
+      category: "Interop",
+      inputs: ["otm"],
+      outputs: ["json"],
+      configSchema: {
+        type: "object",
+        properties: {
+          baseUrl: { type: "string", default: "http://127.0.0.1:8889" },
+        },
+        required: ["baseUrl"],
+      },
+    },
+    {
+      id: "ThreagileAnalyze",
+      name: "Threagile Analyze",
+      category: "Analysis",
+      inputs: ["json"],
+      outputs: ["json"],
+      configSchema: {
+        type: "object",
+        properties: {
+          baseUrl: { type: "string", default: "http://127.0.0.1:8889" },
+          yaml: { type: "string", default: "" },
+        },
+        required: ["baseUrl"],
+      },
+    },
   ],
 };
 

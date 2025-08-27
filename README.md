@@ -22,7 +22,7 @@
 1) 安装并启动 Threatflow 后端（可选，仅当通过 HTTP 调用 Threatflow API 时）
 
 ```bash
-PYTHONPATH=$(pwd)/apps/langflow-server/src \
+PYTHONPATH=$(pwd)/apps/langflow-server/src:$(pwd)/packages/otm-model/src:$(pwd)/packages/adapters/src:$(pwd)/packages/rule-engine/src \
 uvicorn threatflow_server.app:app --reload --port 8889
 ```
 
