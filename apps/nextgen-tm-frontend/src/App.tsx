@@ -99,7 +99,7 @@ export default function App() {
       const position = { x: flowPoint.x - sz.width / 2, y: flowPoint.y - sz.height / 2 };
 
       setNodes((nds) =>
-        nds.concat({ id, position, data: { label, technology: technology || undefined }, type: (type as any), width: sz.width, height: sz.height })
+        nds.concat({ id, position, data: { label, technology: technology || undefined }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 })
       );
     },
     [idSeq, rfInstance]
@@ -307,6 +307,7 @@ export default function App() {
       id: newId,
       position: { x: (src.position?.x || 0) + 40, y: (src.position?.y || 0) + 40 },
       selected: false,
+      zIndex: src.type === "trustBoundary" ? 0 : 1,
     }));
   }, [nodes, idSeq]);
 
@@ -329,7 +330,10 @@ export default function App() {
             <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange as OnNodesChange}
+          onNodesChange={(changes) => {
+            (onNodesChange as OnNodesChange)(changes);
+            setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
+          }}
           onEdgesChange={onEdgesChange as OnEdgesChange}
           onConnect={onConnect}
           onDrop={onDrop}
