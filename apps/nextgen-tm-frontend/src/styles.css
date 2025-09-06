@@ -1,0 +1,17 @@
+:root{ --sidebar-width: 240px; }
+*{ box-sizing:border-box; }
+html,body,#root{ height:100%; margin:0; }
+.app{ display:flex; height:100%; width:100%; }
+.sidebar{ width:var(--sidebar-width); border-right:1px solid #e5e7eb; padding:12px; display:flex; flex-direction:column; gap:8px; }
+.sidebar h3{ margin:4px 0 8px; font-size:14px; color:#374151; }
+.palette-item{ padding:8px 10px; border:1px dashed #9ca3af; border-radius:6px; cursor:grab; background:#f9fafb; }
+.palette-item:active{ cursor:grabbing; }
+.canvas{ flex:1; position:relative; display:flex; flex-direction:column; }
+.toolbar{ display:flex; gap:8px; padding:8px; border-bottom:1px solid #e5e7eb; align-items:center; }
+.toolbar button{ padding:6px 10px; border:1px solid #d1d5db; background:#fff; border-radius:6px; cursor:pointer; }
+.content{ flex:1; display:flex; min-height:0; }
+.flow{ flex:1; }
+.right-panel{ width:280px; border-left:1px solid #e5e7eb; padding:12px; display:flex; flex-direction:column; gap:12px; background:#fafafa; }
+.right-panel h3{ margin:0 0 6px; font-size:14px; color:#374151; }
+.right-panel .empty{ color:#9ca3af; font-size:12px; }
+
