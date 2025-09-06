@@ -18,6 +18,7 @@ import {
 import PropertiesPanel from "./PropertiesPanel";
 import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
+import ContextMenu from "./components/ContextMenu";
 import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
@@ -45,6 +46,7 @@ export default function App() {
   const [selectedKind, setSelectedKind] = useState<"node" | "edge" | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   const [selectedData, setSelectedData] = useState<Record<string, any> | undefined>(undefined);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; type: "node" | "edge"; id: string } | null>(null);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -223,6 +225,44 @@ export default function App() {
     setSelectedData((d) => ({ ...(d || {}), ...updates }));
   }, []);
 
+  const closeCtx = useCallback(() => setCtxMenu(null), []);
+  const onNodeContext = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    const x = rect ? event.clientX - rect.left : event.clientX;
+    const y = rect ? event.clientY - rect.top : event.clientY;
+    setCtxMenu({ x, y, type: "node", id: node.id });
+  }, []);
+  const onEdgeContext = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    const x = rect ? event.clientX - rect.left : event.clientX;
+    const y = rect ? event.clientY - rect.top : event.clientY;
+    setCtxMenu({ x, y, type: "edge", id: edge.id });
+  }, []);
+
+  const duplicateNode = useCallback((id: string) => {
+    const src = nodes.find((n) => n.id === id);
+    if (!src) return;
+    const newId = `n_${idSeq + 1}`;
+    setIdSeq((v) => v + 1);
+    setNodes((nds) => nds.concat({
+      ...src,
+      id: newId,
+      position: { x: (src.position?.x || 0) + 40, y: (src.position?.y || 0) + 40 },
+      selected: false,
+    }));
+  }, [nodes, idSeq]);
+
+  const deleteTarget = useCallback((target: { type: "node" | "edge"; id: string }) => {
+    if (target.type === "node") {
+      setNodes((nds) => nds.filter((n) => n.id !== target.id));
+      setEdges((eds) => eds.filter((e) => e.source !== target.id && e.target !== target.id));
+    } else {
+      setEdges((eds) => eds.filter((e) => e.id !== target.id));
+    }
+  }, []);
+
   return (
     <div className="app">
       {Sidebar}
@@ -243,6 +283,8 @@ export default function App() {
           fitView
           deleteKeyCode={["Delete"]}
             onSelectionChange={onSelectionChange}
+            onNodeContextMenu={onNodeContext}
+            onEdgeContextMenu={onEdgeContext}
           >
               <Background gap={16} color="#f3f4f6" />
               <MiniMap />
@@ -256,6 +298,23 @@ export default function App() {
             onNodeChange={onNodeChangeData}
             onEdgeChange={onEdgeChangeData}
           />
+          {ctxMenu && (
+            <ContextMenu
+              x={ctxMenu.x}
+              y={ctxMenu.y}
+              onClose={closeCtx}
+              items={
+                ctxMenu.type === "node"
+                  ? [
+                      { key: "copy", label: "Copy", onClick: () => { duplicateNode(ctxMenu.id); closeCtx(); } },
+                      { key: "delete", label: "Delete", onClick: () => { deleteTarget(ctxMenu); closeCtx(); } },
+                    ]
+                  : [
+                      { key: "delete", label: "Delete", onClick: () => { deleteTarget(ctxMenu); closeCtx(); } },
+                    ]
+              }
+            />
+          )}
         </div>
       </div>
     </div>
