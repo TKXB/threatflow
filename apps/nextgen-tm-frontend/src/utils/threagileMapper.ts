@@ -106,7 +106,7 @@ export function buildThreagileYaml(nodes: Node[], edges: Edge[], title = "Model"
     const key = `link-${ssrc}-${sdst}`;
     (src.communication_links as Record<string, CommLink>)[key] = {
       target: sdst,
-      protocol: mapProtocol(data.protocol || "HTTPS"),
+      protocol: mapProtocol(data.protocol || "https"),
       authentication: mapAuth(data.authentication || "token"),
       authorization: "none",
       usage: "business",
@@ -148,13 +148,11 @@ function sanitizeId(id: string): string {
 }
 
 function mapProtocol(p: string): string {
-  const m: Record<string, string> = {
-    HTTP: "http",
-    HTTPS: "https",
-    gRPC: "unknown-protocol",
-    AMQP: "unknown-protocol",
-  };
-  return m[p] || "unknown-protocol";
+  // Accept either UI legacy names (HTTP/HTTPS) or native Threagile protocol enums.
+  const legacy: Record<string, string> = { HTTP: "http", HTTPS: "https" };
+  if (legacy[p]) return legacy[p];
+  // If user selected a Threagile protocol value already, pass through.
+  return p || "unknown-protocol";
 }
 
 function mapAuth(a: string): CommLink["authentication"] {
