@@ -75,6 +75,7 @@ export default function App() {
     (event: React.DragEvent) => {
       event.preventDefault();
       const type = event.dataTransfer.getData("application/tm-node");
+      const technology = event.dataTransfer.getData("application/tm-node-tech");
       if (!type) return;
 
       const flowPoint = rfInstance
@@ -86,7 +87,7 @@ export default function App() {
       const id = `n_${idSeq}`;
       setIdSeq((v) => v + 1);
 
-      const label = type === "actor" ? "Actor" : type === "process" ? "Process" : type === "store" ? "Store" : "Trust Boundary";
+      const label = type === "actor" ? "Actor" : type === "process" ? (technology || "Process") : type === "store" ? "Store" : "Trust Boundary";
 
       const sizeMap: Record<string, { width: number; height: number }> = {
         actor: { width: 64, height: 64 },
@@ -98,7 +99,7 @@ export default function App() {
       const position = { x: flowPoint.x - sz.width / 2, y: flowPoint.y - sz.height / 2 };
 
       setNodes((nds) =>
-        nds.concat({ id, position, data: { label }, type: (type as any), width: sz.width, height: sz.height })
+        nds.concat({ id, position, data: { label, technology: technology || undefined }, type: (type as any), width: sz.width, height: sz.height })
       );
     },
     [idSeq, rfInstance]
@@ -120,12 +121,57 @@ export default function App() {
         >
           Actor
         </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => e.dataTransfer.setData("application/tm-node", "process")}
-        >
-          Process
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>Process</div>
+          <div
+            className="palette-item"
+            draggable
+            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "web-application"); }}
+          >
+            🧩 Web App
+          </div>
+          <div
+            className="palette-item"
+            draggable
+            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "application-server"); }}
+          >
+            🛰️ App Server
+          </div>
+          <div
+            className="palette-item"
+            draggable
+            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "load-balancer"); }}
+          >
+            ⚖️ Load Balancer
+          </div>
+          <div
+            className="palette-item"
+            draggable
+            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "message-queue"); }}
+          >
+            📬 Message Queue
+          </div>
+          <div
+            className="palette-item"
+            draggable
+            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "gateway"); }}
+          >
+            🛡️ API Gateway
+          </div>
+          <div
+            className="palette-item"
+            draggable
+            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "task"); }}
+          >
+            ⏱️ Task/Worker
+          </div>
+          <div
+            className="palette-item"
+            draggable
+            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "scheduler"); }}
+          >
+            🗓️ Scheduler
+          </div>
         </div>
         <div
           className="palette-item"
