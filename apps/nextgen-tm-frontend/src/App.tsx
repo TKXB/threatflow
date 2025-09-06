@@ -13,7 +13,6 @@ import {
   useNodesState,
   useEdgesState,
   MarkerType,
-  useReactFlow,
 } from "@xyflow/react";
 import PropertiesPanel from "./PropertiesPanel";
 import { buildOtmFromGraph } from "./utils/otmMapper";
@@ -40,6 +39,7 @@ const nodeStyle: React.CSSProperties = {
 
 export default function App() {
   const reactFlowWrapper = useRef<HTMLDivElement | null>(null);
+  const [rfInstance, setRfInstance] = useState<any>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [idSeq, setIdSeq] = useState(1);
@@ -74,24 +74,34 @@ export default function App() {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      const bounds = reactFlowWrapper.current?.getBoundingClientRect();
       const type = event.dataTransfer.getData("application/tm-node");
-      if (!bounds || !type) return;
+      if (!type) return;
 
-      const position = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+      const flowPoint = rfInstance
+        ? rfInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY })
+        : (() => {
+            const rect = reactFlowWrapper.current?.getBoundingClientRect();
+            return { x: (event.clientX - (rect?.left || 0)), y: (event.clientY - (rect?.top || 0)) };
+          })();
       const id = `n_${idSeq}`;
       setIdSeq((v) => v + 1);
 
       const label = type === "actor" ? "Actor" : type === "process" ? "Process" : type === "store" ? "Store" : "Trust Boundary";
-      const defaultSize =
-        type === "trustBoundary"
-          ? { width: 260, height: 160 }
-          : { width: undefined, height: undefined };
+
+      const sizeMap: Record<string, { width: number; height: number }> = {
+        actor: { width: 64, height: 64 },
+        process: { width: 120, height: 60 },
+        store: { width: 120, height: 70 },
+        trustBoundary: { width: 260, height: 160 },
+      };
+      const sz = sizeMap[type] || { width: 100, height: 60 };
+      const position = { x: flowPoint.x - sz.width / 2, y: flowPoint.y - sz.height / 2 };
+
       setNodes((nds) =>
-        nds.concat({ id, position, data: { label }, type: (type as any), ...defaultSize })
+        nds.concat({ id, position, data: { label }, type: (type as any), width: sz.width, height: sz.height })
       );
     },
-    [idSeq]
+    [idSeq, rfInstance]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -283,6 +293,7 @@ export default function App() {
           fitView
           deleteKeyCode={["Delete"]}
             onSelectionChange={onSelectionChange}
+            onInit={setRfInstance}
             onNodeContextMenu={onNodeContext}
             onEdgeContextMenu={onEdgeContext}
           >
