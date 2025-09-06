@@ -34,12 +34,13 @@ type CommLink = {
 
 export function buildThreagileYaml(nodes: Node[], edges: Edge[], title = "Model"): string {
   const assets: Record<string, TechAsset> = {};
+  const boundaries: Record<string, any> = {};
   const idMap: Record<string, string> = {};
 
   // sanitize and uniquify ids according to Threagile rules (letters, numbers, hyphen)
   const used = new Set<string>();
   for (const n of nodes) {
-    if (!n.type || n.type === "trustBoundary") continue;
+    if (!n.type) continue;
     let sid = sanitizeId(n.id);
     let base = sid;
     let i = 1;
@@ -50,18 +51,31 @@ export function buildThreagileYaml(nodes: Node[], edges: Edge[], title = "Model"
     idMap[n.id] = sid;
   }
 
-  // Create assets from nodes
+  // Create assets and boundaries from nodes
   for (const n of nodes) {
     if (!n.type) continue;
-    if (n.type === "trustBoundary") continue;
     const data: any = n.data || {};
+    const sid = idMap[n.id];
+    
+    if (n.type === "trustBoundary") {
+      // Handle trust boundary
+      boundaries[sid] = {
+        id: sid,
+        description: data.label || "Trust Boundary",
+        type: mapBoundaryType(data.boundaryType || "network"),
+        tags: [],
+        technical_assets_inside: (data.containedNodes || []).map((nodeId: string) => idMap[nodeId]).filter(Boolean),
+        trust_boundaries_nested: [],
+      };
+      continue;
+    }
+    
     let type: TechAsset["type"] = "process";
     if (n.type === "actor") type = "external-entity";
     if (n.type === "store") type = "datastore";
 
-    const technology = n.type === "store" ? "database" : n.type === "actor" ? "client-system" : "web-application";
+    const technology = n.type === "store" ? "database" : n.type === "actor" ? "client-system" : (data.technology || "web-application");
 
-    const sid = idMap[n.id];
     assets[sid] = {
       id: sid,
       description: data.label || n.id,
@@ -107,7 +121,7 @@ export function buildThreagileYaml(nodes: Node[], edges: Edge[], title = "Model"
     business_criticality: "important",
     // Provide at least empty sections some validators expect
     data_assets: {},
-    trust_boundaries: {},
+    trust_boundaries: boundaries,
     technical_assets: Object.fromEntries(Object.entries(assets).map(([k, v]) => [k, sanitizeAsset(v)])),
   };
 
@@ -151,5 +165,14 @@ function mapAuth(a: string): CommLink["authentication"] {
     mtls: "client-certificate",
   };
   return m[a] || "none";
+}
+
+function mapBoundaryType(t: string): string {
+  const m: Record<string, string> = {
+    network: "network-cloud-security-group",
+    privilege: "execution-environment",
+    tenant: "network-policy-namespace-isolation",
+  };
+  return m[t] || "network-cloud-security-group";
 }
 

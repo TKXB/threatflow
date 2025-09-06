@@ -128,6 +128,14 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
               ]}
               onChange={(v) => onNodeChange({ boundaryType: v })}
             />
+            {data?.containedNodes && data.containedNodes.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <span style={{ fontSize: 12, color: "#6b7280" }}>Contained Components:</span>
+                <div style={{ fontSize: 11, color: "#374151", marginTop: 4 }}>
+                  {data.containedNodes.join(", ")}
+                </div>
+              </div>
+            )}
           </div>
         );
       default:

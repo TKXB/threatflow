@@ -8,6 +8,7 @@ import {
   Connection,
   Edge,
   Node,
+  OnNodeDrag,
   OnNodesChange,
   OnEdgesChange,
   useNodesState,
@@ -320,6 +321,66 @@ export default function App() {
     }
   }, []);
 
+  // Helper functions for boundary containment
+  function getNodeRect(node: Node): { x: number; y: number; w: number; h: number } {
+    const defaultSizes: Record<string, { w: number; h: number }> = {
+      actor: { w: 64, h: 64 },
+      process: { w: 120, h: 60 },
+      store: { w: 120, h: 70 },
+      trustBoundary: { w: 260, h: 160 },
+    };
+    const size = defaultSizes[node.type || ""] || { w: 100, h: 60 };
+    return {
+      x: node.position?.x || 0,
+      y: node.position?.y || 0,
+      w: (node as any).width || size.w,
+      h: (node as any).height || size.h,
+    };
+  }
+
+  function isNodeInsideBoundary(node: Node, boundary: Node): boolean {
+    if (node.type === "trustBoundary") return false;
+    const nodeRect = getNodeRect(node);
+    const boundaryRect = getNodeRect(boundary);
+    
+    // Check if node center is inside boundary
+    const centerX = nodeRect.x + nodeRect.w / 2;
+    const centerY = nodeRect.y + nodeRect.h / 2;
+    
+    return (
+      centerX >= boundaryRect.x &&
+      centerX <= boundaryRect.x + boundaryRect.w &&
+      centerY >= boundaryRect.y &&
+      centerY <= boundaryRect.y + boundaryRect.h
+    );
+  }
+
+  function updateBoundaryContainment() {
+    setNodes((nds) => {
+      const boundaries = nds.filter((n) => n.type === "trustBoundary");
+      const otherNodes = nds.filter((n) => n.type !== "trustBoundary");
+      
+      return nds.map((node) => {
+        if (node.type === "trustBoundary") {
+          const containedNodes = otherNodes.filter((n) => isNodeInsideBoundary(n, node));
+          const containedIds = containedNodes.map((n) => n.id);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              containedNodes: containedIds,
+            },
+          };
+        }
+        return node;
+      });
+    });
+  }
+
+  const onNodeDragStop: OnNodeDrag = useCallback(() => {
+    updateBoundaryContainment();
+  }, []);
+
   return (
     <div className="app">
       {Sidebar}
@@ -346,6 +407,7 @@ export default function App() {
             onInit={setRfInstance}
             onNodeContextMenu={onNodeContext}
             onEdgeContextMenu={onEdgeContext}
+            onNodeDragStop={onNodeDragStop}
           >
               <Background gap={16} color="#f3f4f6" />
               <MiniMap />
