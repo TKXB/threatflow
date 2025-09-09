@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   Controls,
@@ -21,6 +21,7 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
+import { analyzeSimplePaths } from "./utils/pathAnalysis";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -55,6 +56,48 @@ export default function AttackPathApp() {
     } as any),
     []
   );
+
+  const STORAGE_KEYS = {
+    nodes: "tf_attack_nodes",
+    edges: "tf_attack_edges",
+    idseq: "tf_attack_idseq",
+  } as const;
+
+  function safeParse<T>(text: string | null, fallback: T): T {
+    if (!text) return fallback;
+    try { return JSON.parse(text) as T; } catch { return fallback; }
+  }
+
+  function computeNextIdSeq(ns: Node[]): number {
+    let maxNum = 0;
+    for (const n of ns) {
+      const m = /^n_(\d+)$/.exec(n.id);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    }
+    return Math.max(1, maxNum + 1);
+  }
+
+  useEffect(() => {
+    try {
+      const savedNodes = safeParse<Node<BasicNodeData>[]>(localStorage.getItem(STORAGE_KEYS.nodes), []);
+      const savedEdges = safeParse<Edge[]>(localStorage.getItem(STORAGE_KEYS.edges), []);
+      if (savedNodes.length > 0 || savedEdges.length > 0) {
+        const mapped = savedNodes.map((n: any) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 }));
+        setNodes(mapped as any);
+        setEdges(savedEdges as any);
+        const storedId = safeParse<number | null>(localStorage.getItem(STORAGE_KEYS.idseq), null);
+        setIdSeq(storedId ?? computeNextIdSeq(mapped as any));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.nodes, JSON.stringify(nodes));
+      localStorage.setItem(STORAGE_KEYS.edges, JSON.stringify(edges));
+      localStorage.setItem(STORAGE_KEYS.idseq, JSON.stringify(idSeq));
+    } catch {}
+  }, [nodes, edges, idSeq]);
 
   const onConnect = useCallback((conn: Connection) => {
     setEdges((eds) =>
@@ -203,11 +246,25 @@ export default function AttackPathApp() {
     () => (
       <div className="toolbar">
         <button onClick={() => { setNodes([]); setEdges([]); }}>Clear All</button>
-        <button onClick={() => alert("Attack path analysis coming soon!")}>Analyze Paths</button>
+        <button
+          onClick={() => {
+            const paths = analyzeSimplePaths(nodes as any, edges as any, { k: 10, maxDepth: 20 });
+            if (paths.length === 0) {
+              alert("No paths found from entry to target.");
+              return;
+            }
+            const text = paths
+              .map((p, i) => `${i + 1}. ${p.labels.join(" -> ")}`)
+              .join("\n");
+            alert(`Top paths (up to 10):\n${text}`);
+          }}
+        >
+          Analyze Paths
+        </button>
         <button onClick={() => alert("Template import from backend coming soon!")}>Import Templates</button>
       </div>
     ),
-    []
+    [nodes, edges]
   );
 
   const onSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {

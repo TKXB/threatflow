@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   Controls,
@@ -57,6 +57,48 @@ export default function ThreatModelingApp() {
     } as any),
     []
   );
+
+  const STORAGE_KEYS = {
+    nodes: "tf_tm_nodes",
+    edges: "tf_tm_edges",
+    idseq: "tf_tm_idseq",
+  } as const;
+
+  function safeParse<T>(text: string | null, fallback: T): T {
+    if (!text) return fallback;
+    try { return JSON.parse(text) as T; } catch { return fallback; }
+  }
+
+  function computeNextIdSeq(ns: Node[]): number {
+    let maxNum = 0;
+    for (const n of ns) {
+      const m = /^n_(\d+)$/.exec(n.id);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    }
+    return Math.max(1, maxNum + 1);
+  }
+
+  useEffect(() => {
+    try {
+      const savedNodes = safeParse<Node<any>[]>(localStorage.getItem(STORAGE_KEYS.nodes), []);
+      const savedEdges = safeParse<Edge[]>(localStorage.getItem(STORAGE_KEYS.edges), []);
+      if (savedNodes.length > 0 || savedEdges.length > 0) {
+        const mapped = savedNodes.map((n: any) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 }));
+        setNodes(mapped as any);
+        setEdges(savedEdges as any);
+        const storedId = safeParse<number | null>(localStorage.getItem(STORAGE_KEYS.idseq), null);
+        setIdSeq(storedId ?? computeNextIdSeq(mapped as any));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.nodes, JSON.stringify(nodes));
+      localStorage.setItem(STORAGE_KEYS.edges, JSON.stringify(edges));
+      localStorage.setItem(STORAGE_KEYS.idseq, JSON.stringify(idSeq));
+    } catch {}
+  }, [nodes, edges, idSeq]);
 
   const onConnect = useCallback((conn: Connection) => {
     setEdges((eds) =>
