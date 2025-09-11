@@ -12,6 +12,12 @@ export type AnalyzeOptions = {
   targets?: string[]; // node ids
 };
 
+export type ScoredPath = {
+  nodeIds: string[];
+  labels: string[];
+  score: number;
+};
+
 function getLabel(n: Node): string {
   const dataLabel = (n as any).data?.label;
   if (typeof dataLabel === "string" && dataLabel.trim().length > 0) return dataLabel;
@@ -19,10 +25,20 @@ function getLabel(n: Node): string {
 }
 
 function inferSources(nodes: Node[]): string[] {
+  const flagged = nodes.filter((n) => {
+    const v = (n as any).data?.isEntry;
+    return v === true || v === "yes";
+  });
+  if (flagged.length > 0) return flagged.map((n) => n.id);
   return nodes.filter((n) => n.type === "actor").map((n) => n.id);
 }
 
 function inferTargets(nodes: Node[]): string[] {
+  const flagged = nodes.filter((n) => {
+    const v = (n as any).data?.isTarget;
+    return v === true || v === "yes";
+  });
+  if (flagged.length > 0) return flagged.map((n) => n.id);
   const candidates = nodes.filter((n) => {
     const tech = (n as any).data?.technology?.toString().toLowerCase?.();
     const label = ((n as any).data?.label || "").toString().toLowerCase?.();
@@ -32,6 +48,32 @@ function inferTargets(nodes: Node[]): string[] {
   if (candidates.length > 0) return candidates.map((n) => n.id);
   // fallback: any store node as potential target
   return nodes.filter((n) => n.type === "store").map((n) => n.id);
+}
+
+function getImpactForNode(node: Node): number {
+  const raw = (node as any).data?.impact;
+  const val = Number.parseInt(String(raw ?? ""), 10);
+  if (Number.isFinite(val) && val >= 1 && val <= 5) return val;
+  // simple defaults by type/flags
+  if (node.type === "store") {
+    const containsPII = (node as any).data?.containsPII;
+    return containsPII === "yes" ? 5 : 3;
+  }
+  if (node.type === "process") return 3;
+  if (node.type === "actor") return 2;
+  return 2;
+}
+
+function getLikelihoodForEdge(edge: Edge): number {
+  const raw = (edge as any).data?.likelihood;
+  const val = Number.parseInt(String(raw ?? ""), 10);
+  if (Number.isFinite(val) && val >= 1 && val <= 5) return val;
+  // quick defaults based on protocol/public network
+  const p = ((edge as any).data?.protocol || "").toString().toLowerCase();
+  if ((edge as any).data?.publicNetwork === "yes") return 4;
+  if (p.includes("http") && !p.includes("https")) return 4;
+  if (p.includes("mqtt") || p.includes("ws")) return 3;
+  return 2;
 }
 
 function buildAdjacency(edges: Edge[]): Map<string, string[]> {
@@ -86,5 +128,35 @@ export function analyzeSimplePaths(
   }
 
   return results.slice(0, k);
+}
+
+export function analyzeSimplePathsWithScores(
+  nodes: Node[],
+  edges: Edge[],
+  options: AnalyzeOptions = {}
+): ScoredPath[] {
+  const base = analyzeSimplePaths(nodes, edges, options);
+  const idToNode = new Map<string, Node>(nodes.map((n) => [n.id, n]));
+  const findEdge = (a: string, b: string): Edge | undefined => edges.find((e: any) => e.source === a && e.target === b);
+
+  function scoreOf(path: SimplePath): number {
+    let score = 0;
+    for (let i = 0; i < path.nodeIds.length - 1; i++) {
+      const fromId = path.nodeIds[i];
+      const toId = path.nodeIds[i + 1];
+      const toNode = idToNode.get(toId);
+      const edge = findEdge(fromId, toId);
+      if (!toNode || !edge) continue;
+      const I = getImpactForNode(toNode);
+      const L = getLikelihoodForEdge(edge);
+      score += I * L;
+    }
+    return score;
+  }
+
+  const scored = base.map((p) => ({ nodeIds: p.nodeIds, labels: p.labels, score: scoreOf(p) }));
+  scored.sort((a, b) => b.score - a.score);
+  const k = Math.max(1, options.k ?? 10);
+  return scored.slice(0, k);
 }
 

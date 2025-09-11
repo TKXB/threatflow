@@ -31,6 +31,32 @@ function RowSelect({ label, value, options, onChange }: SelectProps) {
   );
 }
 
+type InputProps = {
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+};
+
+function RowInput({ label, value, placeholder, onChange }: InputProps) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontSize: 12, color: "#6b7280" }}>{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          border: "1px solid #d1d5db",
+          borderRadius: 6,
+          padding: "6px 8px",
+          background: "#fff",
+        }}
+      />
+    </label>
+  );
+}
+
 export type PanelProps = {
   kind: "node" | "edge" | null;
   nodeType?: string;
@@ -55,6 +81,21 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
         return (
           <div className="right-panel">
             <h3>Actor</h3>
+            <RowInput
+              label="Label"
+              value={data?.label ?? ""}
+              placeholder="Actor label"
+              onChange={(v) => onNodeChange({ label: v })}
+            />
+            <RowSelect
+              label="Entry Point"
+              value={data?.isEntry ?? "no"}
+              options={[
+                { value: "no", label: "No" },
+                { value: "yes", label: "Yes" },
+              ]}
+              onChange={(v) => onNodeChange({ isEntry: v })}
+            />
             <RowSelect
               label="Provides Authentication"
               value={data?.providesAuthentication ?? "no"}
@@ -70,6 +111,12 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
         return (
           <div className="right-panel">
             <h3>Process</h3>
+            <RowInput
+              label="Label"
+              value={data?.label ?? ""}
+              placeholder="Process label"
+              onChange={(v) => onNodeChange({ label: v })}
+            />
             <RowSelect
               label="Handles Secrets"
               value={data?.handlesSecrets ?? "no"}
@@ -88,12 +135,30 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
               ]}
               onChange={(v) => onNodeChange({ validatesInput: v })}
             />
+            <RowSelect
+              label="Impact (1-5)"
+              value={(data?.impact ?? "3").toString()}
+              options={[
+                { value: "1", label: "1" },
+                { value: "2", label: "2" },
+                { value: "3", label: "3" },
+                { value: "4", label: "4" },
+                { value: "5", label: "5" },
+              ]}
+              onChange={(v) => onNodeChange({ impact: v })}
+            />
           </div>
         );
       case "store":
         return (
           <div className="right-panel">
             <h3>Data Store</h3>
+            <RowInput
+              label="Label"
+              value={data?.label ?? ""}
+              placeholder="Store label"
+              onChange={(v) => onNodeChange({ label: v })}
+            />
             <RowSelect
               label="Contains PII"
               value={data?.containsPII ?? "no"}
@@ -112,12 +177,39 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
               ]}
               onChange={(v) => onNodeChange({ encryptedAtRest: v })}
             />
+            <RowSelect
+              label="Target"
+              value={data?.isTarget ?? "no"}
+              options={[
+                { value: "no", label: "No" },
+                { value: "yes", label: "Yes" },
+              ]}
+              onChange={(v) => onNodeChange({ isTarget: v })}
+            />
+            <RowSelect
+              label="Impact (1-5)"
+              value={(data?.impact ?? "4").toString()}
+              options={[
+                { value: "1", label: "1" },
+                { value: "2", label: "2" },
+                { value: "3", label: "3" },
+                { value: "4", label: "4" },
+                { value: "5", label: "5" },
+              ]}
+              onChange={(v) => onNodeChange({ impact: v })}
+            />
           </div>
         );
       case "trustBoundary":
         return (
           <div className="right-panel">
             <h3>Trust Boundary</h3>
+            <RowInput
+              label="Label"
+              value={data?.label ?? ""}
+              placeholder="Boundary label"
+              onChange={(v) => onNodeChange({ label: v })}
+            />
             <RowSelect
               label="Boundary Type"
               value={data?.boundaryType ?? "network"}
@@ -152,6 +244,12 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
   return (
     <div className="right-panel">
       <h3>Data Flow</h3>
+      <RowInput
+        label="Label"
+        value={data?.label ?? ""}
+        placeholder="Edge label"
+        onChange={(v) => onEdgeChange({ label: v })}
+      />
       <RowSelect
         label="Protocol"
         value={data?.protocol ?? "https"}
@@ -205,6 +303,18 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
           { value: "container-spawning", label: "container-spawning" },
         ]}
         onChange={(v) => onEdgeChange({ protocol: v })}
+      />
+      <RowSelect
+        label="Likelihood (1-5)"
+        value={(data?.likelihood ?? "3").toString()}
+        options={[
+          { value: "1", label: "1" },
+          { value: "2", label: "2" },
+          { value: "3", label: "3" },
+          { value: "4", label: "4" },
+          { value: "5", label: "5" },
+        ]}
+        onChange={(v) => onEdgeChange({ likelihood: v })}
       />
       <RowSelect
         label="Encrypted in Transit"

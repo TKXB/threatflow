@@ -21,7 +21,10 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
-import { analyzeSimplePaths } from "./utils/pathAnalysis";
+import { analyzeSimplePaths, analyzeSimplePathsWithScores, type ScoredPath } from "./utils/pathAnalysis";
+import { buildOtmFromGraph } from "./utils/otmMapper";
+import { buildThreagileYaml } from "./utils/threagileMapper";
+import { suggestAttackMethods } from "./knowledge/attackMethods";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -47,6 +50,9 @@ export default function AttackPathApp() {
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   const [selectedData, setSelectedData] = useState<Record<string, any> | undefined>(undefined);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; type: "node" | "edge"; id: string } | null>(null);
+  const [highlighted, setHighlighted] = useState<{ nodeIds: Set<string>; edgeIds: Set<string> }>({ nodeIds: new Set(), edgeIds: new Set() });
+  const [analyzing, setAnalyzing] = useState(false);
+  const [lastScores, setLastScores] = useState<ScoredPath[] | null>(null);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -99,6 +105,66 @@ export default function AttackPathApp() {
     } catch {}
   }, [nodes, edges, idSeq]);
 
+  function download(filename: string, content: string, mime: string) {
+    try {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {}
+  }
+
+  function clearHighlights() {
+    setHighlighted({ nodeIds: new Set(), edgeIds: new Set() });
+    // remove highlight styles
+    setNodes((nds) => nds.map((n) => ({ ...n, style: { ...(n.style || {}), outline: undefined, boxShadow: undefined, borderColor: undefined } })));
+    setEdges((eds) => eds.map((e) => ({ ...e, style: { ...(e.style || {}), stroke: undefined, strokeWidth: 1.6 } })));
+  }
+
+  function applyHighlightsFromPaths(paths: { nodeIds: string[] }[]) {
+    const nodeIds = new Set<string>();
+    const edgeIds = new Set<string>();
+    const edgeByPair = new Map<string, string>();
+    for (const e of edges) {
+      const key = `${(e as any).source}__${(e as any).target}`;
+      edgeByPair.set(key, e.id);
+    }
+    for (const p of paths) {
+      for (const nid of p.nodeIds) nodeIds.add(nid);
+      for (let i = 0; i < p.nodeIds.length - 1; i++) {
+        const key = `${p.nodeIds[i]}__${p.nodeIds[i + 1]}`;
+        const eid = edgeByPair.get(key);
+        if (eid) edgeIds.add(eid);
+      }
+    }
+    setHighlighted({ nodeIds, edgeIds });
+    setNodes((nds) => nds.map((n) => nodeIds.has(n.id) ? { ...n, style: { ...(n.style || {}), outline: "2px solid #ef4444", boxShadow: "0 0 0 2px rgba(239,68,68,0.2)", borderColor: "#ef4444" } } : { ...n, style: { ...(n.style || {}), outline: undefined, boxShadow: undefined, borderColor: undefined } }));
+    setEdges((eds) => eds.map((e) => edgeIds.has(e.id) ? { ...e, style: { ...(e.style || {}), stroke: "#ef4444", strokeWidth: 2.4 } } : { ...e, style: { ...(e.style || {}), stroke: undefined, strokeWidth: 1.6 } }));
+  }
+
+  async function runMockAnalysisAndHighlight() {
+    setAnalyzing(true);
+    try {
+      // mock latency
+      await new Promise((r) => setTimeout(r, 400));
+      const paths = analyzeSimplePathsWithScores(nodes as any, edges as any, { k: 10, maxDepth: 20 });
+      setLastScores(paths);
+      if (paths.length === 0) {
+        alert("No paths found from entry to target.");
+        clearHighlights();
+        return;
+      }
+      applyHighlightsFromPaths([paths[0]]);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   const onConnect = useCallback((conn: Connection) => {
     setEdges((eds) =>
       addEdge(
@@ -118,6 +184,10 @@ export default function AttackPathApp() {
       event.preventDefault();
       const type = event.dataTransfer.getData("application/tm-node");
       const technology = event.dataTransfer.getData("application/tm-node-tech");
+      const customLabel = event.dataTransfer.getData("application/tm-node-label");
+      const flagsRaw = event.dataTransfer.getData("application/tm-node-flags");
+      let extraFlags: Record<string, any> | undefined;
+      try { extraFlags = flagsRaw ? JSON.parse(flagsRaw) : undefined; } catch { extraFlags = undefined; }
       if (!type) return;
 
       const flowPoint = rfInstance
@@ -129,7 +199,11 @@ export default function AttackPathApp() {
       const id = `n_${idSeq}`;
       setIdSeq((v) => v + 1);
 
-      const label = type === "actor" ? (technology || "Actor") : type === "process" ? (technology || "Process") : type === "store" ? "Store" : "Trust Boundary";
+      const label = customLabel
+        || (type === "actor" ? (technology || "Actor")
+        : type === "process" ? (technology || "Process")
+        : type === "store" ? (technology || "Store")
+        : "Trust Boundary");
 
       const sizeMap: Record<string, { width: number; height: number }> = {
         actor: { width: 64, height: 64 },
@@ -142,7 +216,7 @@ export default function AttackPathApp() {
 
       setNodes((nds) => [
         ...nds,
-        { id, position, data: { label, technology: technology || undefined }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 },
+        { id, position, data: { label, technology: technology || undefined, ...(extraFlags || {}) }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 },
       ]);
     },
     [idSeq, rfInstance]
@@ -185,6 +259,31 @@ export default function AttackPathApp() {
           onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "actor"); e.dataTransfer.setData("application/tm-node-tech", "jtag"); }}
         >
           🔧 JTAG
+        </div>
+        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>Goal Assets</div>
+        <div
+          className="palette-item"
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData("application/tm-node", "store");
+            e.dataTransfer.setData("application/tm-node-tech", "linux");
+            e.dataTransfer.setData("application/tm-node-label", "Linux Target");
+            e.dataTransfer.setData("application/tm-node-flags", JSON.stringify({ isTarget: "yes" }));
+          }}
+        >
+          🐧 Linux (Goal)
+        </div>
+        <div
+          className="palette-item"
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData("application/tm-node", "store");
+            e.dataTransfer.setData("application/tm-node-tech", "spi");
+            e.dataTransfer.setData("application/tm-node-label", "SPI Device");
+            e.dataTransfer.setData("application/tm-node-flags", JSON.stringify({ isTarget: "yes" }));
+          }}
+        >
+          🔌 SPI Device (Goal)
         </div>
         <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>Logic</div>
         <div
@@ -235,7 +334,7 @@ export default function AttackPathApp() {
           draggable
           onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "store"); e.dataTransfer.setData("application/tm-node-tech", "target"); }}
         >
-          🎯 Target/Goal
+          🎯 Goal Asset
         </div>
       </div>
     ),
@@ -246,25 +345,57 @@ export default function AttackPathApp() {
     () => (
       <div className="toolbar">
         <button onClick={() => { setNodes([]); setEdges([]); }}>Clear All</button>
-        <button
-          onClick={() => {
-            const paths = analyzeSimplePaths(nodes as any, edges as any, { k: 10, maxDepth: 20 });
-            if (paths.length === 0) {
-              alert("No paths found from entry to target.");
-              return;
-            }
-            const text = paths
-              .map((p, i) => `${i + 1}. ${p.labels.join(" -> ")}`)
-              .join("\n");
-            alert(`Top paths (up to 10):\n${text}`);
-          }}
-        >
-          Analyze Paths
-        </button>
-        <button onClick={() => alert("Template import from backend coming soon!")}>Import Templates</button>
+        <button disabled={analyzing} onClick={() => runMockAnalysisAndHighlight()}>{analyzing ? "Analyzing..." : "Analyze & Highlight"}</button>
+        <button onClick={() => {
+          const paths = analyzeSimplePathsWithScores(nodes as any, edges as any, { k: 10, maxDepth: 20 });
+          setLastScores(paths);
+          if (paths.length === 0) { alert("No paths found from entry to target."); return; }
+          const text = paths
+            .map((p, i) => `${i + 1}. [score=${p.score}] ${p.labels.join(" -> ")}`)
+            .join("\n");
+          alert(`Top paths (scored):\n${text}`);
+        }}>Show Top-K (Scores)</button>
+        <button onClick={clearHighlights}>Clear Highlights</button>
+        <span style={{ flex: 1 }} />
+        <button onClick={() => {
+          const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
+          download("model.otm.json", JSON.stringify(otm, null, 2), "application/json");
+        }}>Export OTM</button>
+        <button onClick={() => {
+          const yaml = buildThreagileYaml(nodes as any, edges as any, "Model");
+          download("model.threagile.yaml", yaml, "text/yaml");
+        }}>Export Threagile</button>
+        <button onClick={() => {
+          const paths = lastScores ?? analyzeSimplePathsWithScores(nodes as any, edges as any, { k: 10, maxDepth: 20 });
+          const report = { generatedAt: new Date().toISOString(), summary: { numPaths: paths.length, topScore: paths[0]?.score ?? 0 }, paths };
+          download("analysis-report.json", JSON.stringify(report, null, 2), "application/json");
+        }}>Export Report</button>
+        <button onClick={() => {
+          const methods = suggestAttackMethods(nodes as any, edges as any, { k: 10, maxDepth: 20 });
+          if (methods.length === 0) { alert("No attack methods suggested for current Entry→Target paths."); return; }
+          const text = methods.map((m, i) => `${i + 1}. [${m.severity}] ${m.title} — ${m.description}`).join("\n\n");
+          alert(`Suggested Attack Methods (demo):\n\n${text}`);
+        }}>Analyze Methods</button>
+        <button onClick={() => {
+          // Demo graph: UART (Entry) -> Linux -> SPI Device (Target)
+          const nid = (s: string) => s;
+          const demoNodes: Node<any>[] = [
+            { id: nid("n_1"), type: "actor", position: { x: 80, y: 160 }, data: { label: "UART", technology: "uart", isEntry: "yes" }, width: 64, height: 64, zIndex: 1 },
+            { id: nid("n_2"), type: "process", position: { x: 260, y: 150 }, data: { label: "Linux", technology: "linux", impact: "4" }, width: 120, height: 60, zIndex: 1 },
+            { id: nid("n_3"), type: "store", position: { x: 480, y: 140 }, data: { label: "SPI Device", technology: "spi", isTarget: "yes", impact: "4" }, width: 120, height: 70, zIndex: 1 },
+          ];
+          const demoEdges: Edge[] = [
+            { id: "e1", source: "n_1", target: "n_2", data: { protocol: "text", likelihood: "4" } } as any,
+            { id: "e2", source: "n_2", target: "n_3", data: { protocol: "local-file-access", likelihood: "3" } } as any,
+          ];
+          setNodes(demoNodes as any);
+          setEdges(demoEdges as any);
+          setIdSeq(4);
+          clearHighlights();
+        }}>Load Demo</button>
       </div>
     ),
-    [nodes, edges]
+    [nodes, edges, analyzing, lastScores]
   );
 
   const onSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
