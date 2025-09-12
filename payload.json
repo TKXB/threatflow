@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    { "id": "n1", "type": "actor",   "data": { "label": "UART", "technology": "uart", "isEntry": "yes" } },
+    { "id": "n2", "type": "process", "data": { "label": "Linux", "technology": "linux", "impact": "4" } },
+    { "id": "n3", "type": "store",   "data": { "label": "SPI Device", "technology": "spi", "isTarget": "yes", "impact": "4" } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "n1", "target": "n2", "data": { "protocol": "text", "likelihood": "4" } },
+    { "id": "e2", "source": "n2", "target": "n3", "data": { "protocol": "local-file-access", "likelihood": "3" } }
+  ],
+  "k": 10,
+  "maxDepth": 20
+}
