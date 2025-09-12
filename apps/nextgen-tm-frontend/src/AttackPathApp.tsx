@@ -21,10 +21,10 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
-import { analyzeSimplePaths, analyzeSimplePathsWithScores, type ScoredPath } from "./utils/pathAnalysis";
+import type { ScoredPath } from "./utils/pathAnalysis";
 import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
-import { suggestAttackMethods } from "./knowledge/attackMethods";
+import type { AttackMethod } from "./knowledge/attackMethods";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -53,6 +53,7 @@ export default function AttackPathApp() {
   const [highlighted, setHighlighted] = useState<{ nodeIds: Set<string>; edgeIds: Set<string> }>({ nodeIds: new Set(), edgeIds: new Set() });
   const [analyzing, setAnalyzing] = useState(false);
   const [lastScores, setLastScores] = useState<ScoredPath[] | null>(null);
+  const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -150,16 +151,20 @@ export default function AttackPathApp() {
   async function runMockAnalysisAndHighlight() {
     setAnalyzing(true);
     try {
-      // mock latency
-      await new Promise((r) => setTimeout(r, 400));
-      const paths = analyzeSimplePathsWithScores(nodes as any, edges as any, { k: 10, maxDepth: 20 });
+      const res = await fetch(`${API}/analysis/paths`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }),
+      });
+      const json = await res.json();
+      const paths: ScoredPath[] = json?.paths || [];
       setLastScores(paths);
-      if (paths.length === 0) {
+      if (!Array.isArray(paths) || paths.length === 0) {
         alert("No paths found from entry to target.");
         clearHighlights();
         return;
       }
-      applyHighlightsFromPaths([paths[0]]);
+      applyHighlightsFromPaths([{ nodeIds: (paths[0] as any).nodeIds }] as any);
     } finally {
       setAnalyzing(false);
     }
@@ -346,14 +351,25 @@ export default function AttackPathApp() {
       <div className="toolbar">
         <button onClick={() => { setNodes([]); setEdges([]); }}>Clear All</button>
         <button disabled={analyzing} onClick={() => runMockAnalysisAndHighlight()}>{analyzing ? "Analyzing..." : "Analyze & Highlight"}</button>
-        <button onClick={() => {
-          const paths = analyzeSimplePathsWithScores(nodes as any, edges as any, { k: 10, maxDepth: 20 });
-          setLastScores(paths);
-          if (paths.length === 0) { alert("No paths found from entry to target."); return; }
-          const text = paths
-            .map((p, i) => `${i + 1}. [score=${p.score}] ${p.labels.join(" -> ")}`)
-            .join("\n");
-          alert(`Top paths (scored):\n${text}`);
+        <button onClick={async () => {
+          try {
+            const res = await fetch(`${API}/analysis/paths`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }),
+            });
+            const json = await res.json();
+            const paths: ScoredPath[] = json?.paths || [];
+            setLastScores(paths);
+            if (!Array.isArray(paths) || paths.length === 0) { alert("No paths found from entry to target."); return; }
+            const text = paths
+              .map((p, i) => `${i + 1}. [score=${p.score}] ${(p as any).labels?.join(" -> ") || (p as any).nodeIds?.join(" -> ")}`)
+              .join("\n");
+            alert(`Top paths (scored):\n${text}`);
+          } catch (e) {
+            console.error(e);
+            alert("Failed to fetch analysis paths");
+          }
         }}>Show Top-K (Scores)</button>
         <button onClick={clearHighlights}>Clear Highlights</button>
         <span style={{ flex: 1 }} />
@@ -365,16 +381,36 @@ export default function AttackPathApp() {
           const yaml = buildThreagileYaml(nodes as any, edges as any, "Model");
           download("model.threagile.yaml", yaml, "text/yaml");
         }}>Export Threagile</button>
-        <button onClick={() => {
-          const paths = lastScores ?? analyzeSimplePathsWithScores(nodes as any, edges as any, { k: 10, maxDepth: 20 });
-          const report = { generatedAt: new Date().toISOString(), summary: { numPaths: paths.length, topScore: paths[0]?.score ?? 0 }, paths };
+        <button onClick={async () => {
+          const paths = lastScores ?? (async () => {
+            const res = await fetch(`${API}/analysis/paths`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }),
+            });
+            const json = await res.json();
+            return (json?.paths || []) as ScoredPath[];
+          })();
+          const resolved = Array.isArray(paths) ? paths : await paths;
+          const report = { generatedAt: new Date().toISOString(), summary: { numPaths: resolved.length, topScore: resolved[0]?.score ?? 0 }, paths: resolved };
           download("analysis-report.json", JSON.stringify(report, null, 2), "application/json");
         }}>Export Report</button>
-        <button onClick={() => {
-          const methods = suggestAttackMethods(nodes as any, edges as any, { k: 10, maxDepth: 20 });
-          if (methods.length === 0) { alert("No attack methods suggested for current Entry→Target paths."); return; }
-          const text = methods.map((m, i) => `${i + 1}. [${m.severity}] ${m.title} — ${m.description}`).join("\n\n");
-          alert(`Suggested Attack Methods (demo):\n\n${text}`);
+        <button onClick={async () => {
+          try {
+            const res = await fetch(`${API}/analysis/methods`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }),
+            });
+            const json = await res.json();
+            const methods: AttackMethod[] = json?.methods || [];
+            if (!Array.isArray(methods) || methods.length === 0) { alert("No attack methods suggested for current Entry→Target paths."); return; }
+            const text = methods.map((m, i) => `${i + 1}. [${m.severity}] ${m.title} — ${m.description}`).join("\n\n");
+            alert(`Suggested Attack Methods (demo):\n\n${text}`);
+          } catch (e) {
+            console.error(e);
+            alert("Failed to fetch attack methods");
+          }
         }}>Analyze Methods</button>
         <button onClick={() => {
           // Demo graph: UART (Entry) -> Linux -> SPI Device (Target)
