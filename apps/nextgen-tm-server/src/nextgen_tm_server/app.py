@@ -12,6 +12,11 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from .llm.templates import (
+    build_attack_methods_schema,
+    default_methods_user_prompt,
+    build_chat_completion_payload,
+)
 
 
 app = FastAPI(title="Nextgen TM Server")
@@ -307,65 +312,19 @@ def analysis_methods_llm(req: LlmMethodsRequest) -> dict[str, Any]:
     model = (req.llm and req.llm.model) or _get_env("LLM_MODEL", "gpt-4o-mini")
 
     # 组织提示词与 JSON Schema（尽量获得结构化输出）
-    schema: dict[str, Any] = {
-        "name": "AttackMethods",
-        "schema": {
-            "type": "object",
-            "properties": {
-                "methods": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "string"},
-                            "title": {"type": "string"},
-                            "description": {"type": "string"},
-                            "severity": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
-                            "confidence": {"type": "number"},
-                            "matchedPath": {
-                                "type": "object",
-                                "properties": {
-                                    "nodeIds": {"type": "array", "items": {"type": "string"}},
-                                    "labels": {"type": "array", "items": {"type": "string"}},
-                                },
-                                "required": ["nodeIds"],
-                                "additionalProperties": True,
-                            },
-                        },
-                        "required": ["title", "description", "severity"],
-                        "additionalProperties": True,
-                    },
-                }
-            },
-            "required": ["methods"],
-            "additionalProperties": False,
-        },
-    }
+    schema: dict[str, Any] = build_attack_methods_schema()
 
-    user_prompt = req.prompt or (
-        "基于给定的威胁建模图（nodes/edges）以及候选的 Entry→Target 路径，"
-        "输出若干可行的攻击手法 methods（JSON），为每条给出 title、description、severity、"
-        "可选 confidence，并指明其适配的路径 matchedPath（尽量使用已给出的 paths 中的一条）。"
-        "只输出 JSON，不要解释文本。"
+    user_prompt = req.prompt or default_methods_user_prompt()
+
+    payload: dict[str, Any] = build_chat_completion_payload(
+        model=model,
+        nodes=req.nodes,
+        edges=req.edges,
+        paths=paths,
+        user_prompt=user_prompt,
+        schema=schema,
+        temperature=0.2,
     )
-
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": [
-            {
-                "role": "user",
-                "content": (
-                    f"nodes: {json.dumps([n.model_dump() for n in req.nodes], ensure_ascii=False)}\n"
-                    f"edges: {json.dumps([e.model_dump() for e in req.edges], ensure_ascii=False)}\n"
-                    f"paths: {json.dumps(paths, ensure_ascii=False)}\n\n"
-                    f"{user_prompt}"
-                ),
-            }
-        ],
-        # OpenAI 兼容：优先尝试 JSON schema 格式化
-        "response_format": {"type": "json_schema", "json_schema": schema},
-        "temperature": 0.2,
-    }
 
     headers = {"content-type": "application/json"}
     if llm_key:
