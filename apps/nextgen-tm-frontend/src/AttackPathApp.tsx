@@ -54,6 +54,10 @@ export default function AttackPathApp() {
   const [analyzing, setAnalyzing] = useState(false);
   const [lastScores, setLastScores] = useState<ScoredPath[] | null>(null);
   const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
+  const [llmBaseUrl, setLlmBaseUrl] = useState<string>("http://127.0.0.1:4000/v1");
+  const [llmApiKey, setLlmApiKey] = useState<string>("");
+  const [llmModel, setLlmModel] = useState<string>("gpt-4o-mini");
+  const [showLlmSettings, setShowLlmSettings] = useState(false);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -68,6 +72,9 @@ export default function AttackPathApp() {
     nodes: "tf_attack_nodes",
     edges: "tf_attack_edges",
     idseq: "tf_attack_idseq",
+    llmBase: "tf_llm_base_url",
+    llmKey: "tf_llm_api_key",
+    llmModel: "tf_llm_model",
   } as const;
 
   function safeParse<T>(text: string | null, fallback: T): T {
@@ -95,6 +102,12 @@ export default function AttackPathApp() {
         const storedId = safeParse<number | null>(localStorage.getItem(STORAGE_KEYS.idseq), null);
         setIdSeq(storedId ?? computeNextIdSeq(mapped as any));
       }
+      const savedLlmBase = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmBase), null);
+      const savedLlmKey = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmKey), null);
+      const savedLlmModel = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmModel), null);
+      if (savedLlmBase) setLlmBaseUrl(savedLlmBase);
+      if (savedLlmKey) setLlmApiKey(savedLlmKey);
+      if (savedLlmModel) setLlmModel(savedLlmModel);
     } catch {}
   }, []);
 
@@ -105,6 +118,15 @@ export default function AttackPathApp() {
       localStorage.setItem(STORAGE_KEYS.idseq, JSON.stringify(idSeq));
     } catch {}
   }, [nodes, edges, idSeq]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
+      // 注意：API Key 存在本地仅用于演示，不建议用于生产
+      localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
+      localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
+    } catch {}
+  }, [llmBaseUrl, llmApiKey, llmModel]);
 
   function download(filename: string, content: string, mime: string) {
     try {
@@ -412,6 +434,24 @@ export default function AttackPathApp() {
             alert("Failed to fetch attack methods");
           }
         }}>Analyze Methods</button>
+        <button onClick={async () => {
+          try {
+            const res = await fetch(`${API}/analysis/llm/methods`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }),
+            });
+            const json = await res.json();
+            const methods: AttackMethod[] = json?.methods || [];
+            if (!Array.isArray(methods) || methods.length === 0) { alert("No LLM-suggested methods."); return; }
+            const text = methods.map((m, i) => `${i + 1}. [${m.severity}] ${m.title} — ${m.description}`).join("\n\n");
+            alert(`LLM Suggested Methods:\n\n${text}`);
+          } catch (e) {
+            console.error(e);
+            alert("Failed to fetch LLM-based methods");
+          }
+        }}>LLM Methods</button>
+        <button onClick={() => setShowLlmSettings(true)}>LLM Settings</button>
         <button onClick={() => {
           // Demo graph: UART (Entry) -> Linux -> SPI Device (Target)
           const nid = (s: string) => s;
@@ -431,7 +471,7 @@ export default function AttackPathApp() {
         }}>Load Demo</button>
       </div>
     ),
-    [nodes, edges, analyzing, lastScores]
+    [nodes, edges, analyzing, lastScores, llmBaseUrl, llmApiKey, llmModel]
   );
 
   const onSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
@@ -604,6 +644,32 @@ export default function AttackPathApp() {
             onNodeChange={onNodeChangeData}
             onEdgeChange={onEdgeChangeData}
           />
+          {showLlmSettings && (
+            <div style={{ position: "absolute", right: 16, top: 56, width: 360, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 10px 25px rgba(0,0,0,0.08)", padding: 12, zIndex: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+                <h4 style={{ margin: 0, fontSize: 14 }}>LLM Settings</h4>
+                <span style={{ flex: 1 }} />
+                <button onClick={() => setShowLlmSettings(false)} style={{ fontSize: 12 }}>Close</button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Base URL</span>
+                  <input value={llmBaseUrl} onChange={(e) => setLlmBaseUrl(e.target.value)} placeholder="http://127.0.0.1:4000/v1" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>API Key</span>
+                  <input value={llmApiKey} onChange={(e) => setLlmApiKey(e.target.value)} placeholder="sk-... (stored locally)" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Model</span>
+                  <input value={llmModel} onChange={(e) => setLlmModel(e.target.value)} placeholder="gpt-4o-mini" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                </label>
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  <button onClick={() => setShowLlmSettings(false)}>Save</button>
+                </div>
+              </div>
+            </div>
+          )}
           {ctxMenu && (
             <ContextMenu
               x={ctxMenu.x}

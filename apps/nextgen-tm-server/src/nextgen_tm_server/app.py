@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List
+import os
+import json
+import re
+import time
+import logging
+
+import httpx
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +15,9 @@ from pydantic import BaseModel
 
 
 app = FastAPI(title="Nextgen TM Server")
+logger = logging.getLogger("nextgen_tm_server")
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -249,4 +259,150 @@ def analysis_methods(req: MethodsRequest) -> dict[str, Any]:
         dedup.append(m)
 
     return {"ok": True, "methods": dedup[: int(req.k)]}
+
+
+# ===== LLM (LiteLLM/OpenAI 兼容代理) 集成 =====
+
+class LlmConfig(BaseModel):
+    baseUrl: str | None = None  # 例如 http://127.0.0.1:4000/v1
+    apiKey: str | None = None
+    model: str | None = None    # 例如 gpt-4o-mini
+
+
+class LlmMethodsRequest(MethodsRequest):
+    llm: LlmConfig | None = None
+    prompt: str | None = None
+
+
+def _get_env(name: str, default: str | None = None) -> str | None:
+    val = os.getenv(name)
+    return val if val is not None and str(val).strip() != "" else default
+
+
+def _extract_json(text: str) -> dict[str, Any]:
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+    # 尝试提取 JSON 片段
+    m = re.search(r"\{[\s\S]*\}", text)
+    if m:
+        try:
+            return json.loads(m.group(0))
+        except Exception:
+            pass
+    return {"methods": []}
+
+
+@app.post("/analysis/llm/methods")
+def analysis_methods_llm(req: LlmMethodsRequest) -> dict[str, Any]:
+    t0 = time.perf_counter()
+    # 先获取基准路径（可作为 LLM 的上下文）
+    base = analysis_paths(AnalyzeRequest(nodes=req.nodes, edges=req.edges, k=req.k, maxDepth=req.maxDepth))
+    paths = base["paths"]
+
+    # 解析 LLM 配置（前端传入优先，其次环境变量）
+    llm_base = (req.llm and req.llm.baseUrl) or _get_env("LLM_BASE_URL", "http://127.0.0.1:4000/v1")
+    llm_key = (req.llm and req.llm.apiKey) or _get_env("LLM_API_KEY", "")
+    model = (req.llm and req.llm.model) or _get_env("LLM_MODEL", "gpt-4o-mini")
+
+    # 组织提示词与 JSON Schema（尽量获得结构化输出）
+    schema: dict[str, Any] = {
+        "name": "AttackMethods",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "methods": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "title": {"type": "string"},
+                            "description": {"type": "string"},
+                            "severity": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+                            "confidence": {"type": "number"},
+                            "matchedPath": {
+                                "type": "object",
+                                "properties": {
+                                    "nodeIds": {"type": "array", "items": {"type": "string"}},
+                                    "labels": {"type": "array", "items": {"type": "string"}},
+                                },
+                                "required": ["nodeIds"],
+                                "additionalProperties": True,
+                            },
+                        },
+                        "required": ["title", "description", "severity"],
+                        "additionalProperties": True,
+                    },
+                }
+            },
+            "required": ["methods"],
+            "additionalProperties": False,
+        },
+    }
+
+    user_prompt = req.prompt or (
+        "基于给定的威胁建模图（nodes/edges）以及候选的 Entry→Target 路径，"
+        "输出若干可行的攻击手法 methods（JSON），为每条给出 title、description、severity、"
+        "可选 confidence，并指明其适配的路径 matchedPath（尽量使用已给出的 paths 中的一条）。"
+        "只输出 JSON，不要解释文本。"
+    )
+
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": (
+                    f"nodes: {json.dumps([n.model_dump() for n in req.nodes], ensure_ascii=False)}\n"
+                    f"edges: {json.dumps([e.model_dump() for e in req.edges], ensure_ascii=False)}\n"
+                    f"paths: {json.dumps(paths, ensure_ascii=False)}\n\n"
+                    f"{user_prompt}"
+                ),
+            }
+        ],
+        # OpenAI 兼容：优先尝试 JSON schema 格式化
+        "response_format": {"type": "json_schema", "json_schema": schema},
+        "temperature": 0.2,
+    }
+
+    headers = {"content-type": "application/json"}
+    if llm_key:
+        headers["authorization"] = f"Bearer {llm_key}"
+
+    try:
+        logger.info(
+            "LLM methods: start request | model=%s base=%s nodes=%d edges=%d paths=%d",
+            model,
+            llm_base,
+            len(req.nodes),
+            len(req.edges),
+            len(paths),
+        )
+        r = httpx.post(f"{llm_base}/chat/completions", headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        elapsed = time.perf_counter() - t0
+        data = r.json()
+        content = (data.get("choices") or [{}])[0].get("message", {}).get("content", "{}")
+        parsed = _extract_json(content)
+        methods = parsed.get("methods") or []
+        # 最多返回 k 条
+        result = {"ok": True, "methods": methods[: int(req.k)]}
+        logger.info(
+            "LLM methods: success | model=%s elapsed_ms=%d methods=%d resp_bytes=%d",
+            model,
+            int(elapsed * 1000),
+            len(result["methods"]),
+            len(r.content or b""),
+        )
+        return result
+    except httpx.HTTPError as ex:
+        elapsed = time.perf_counter() - t0
+        logger.exception("LLM methods: http error | elapsed_ms=%d", int(elapsed * 1000))
+        return {"ok": False, "error": str(ex), "methods": []}
+    except Exception as ex:
+        elapsed = time.perf_counter() - t0
+        logger.exception("LLM methods: failed | elapsed_ms=%d", int(elapsed * 1000))
+        return {"ok": False, "error": str(ex), "methods": []}
 
