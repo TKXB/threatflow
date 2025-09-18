@@ -26,8 +26,20 @@ import type { ScoredPath } from "./utils/pathAnalysis";
 import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
+
+// More permissive type for LLM output (can include "critical")
+type LlmAttackMethod = {
+  id?: string;
+  title: string;
+  description: string;
+  severity: "low" | "medium" | "high" | "critical";
+  confidence?: number; // 0..1
+  references?: { title: string; url: string }[];
+  matchedPath?: { nodeIds: string[]; labels?: string[] };
+};
 
 const initialNodes: Node<BasicNodeData>[] = [];
 const initialEdges: Edge[] = [];
@@ -54,6 +66,7 @@ export default function AttackPathApp() {
   const [highlighted, setHighlighted] = useState<{ nodeIds: Set<string>; edgeIds: Set<string> }>({ nodeIds: new Set(), edgeIds: new Set() });
   const [analyzing, setAnalyzing] = useState(false);
   const [lastScores, setLastScores] = useState<ScoredPath[] | null>(null);
+  const [llmMethods, setLlmMethods] = useState<LlmAttackMethod[] | null>(null);
   const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
   const [llmBaseUrl, setLlmBaseUrl] = useState<string>("http://127.0.0.1:4000/v1");
   const [llmApiKey, setLlmApiKey] = useState<string>("");
@@ -171,6 +184,110 @@ export default function AttackPathApp() {
     setNodes((nds) => nds.map((n) => nodeIds.has(n.id) ? { ...n, style: { ...(n.style || {}), outline: "2px solid #ef4444", boxShadow: "0 0 0 2px rgba(239,68,68,0.2)", borderColor: "#ef4444" } } : { ...n, style: { ...(n.style || {}), outline: undefined, boxShadow: undefined, borderColor: undefined } }));
     setEdges((eds) => eds.map((e) => edgeIds.has(e.id) ? { ...e, style: { ...(e.style || {}), stroke: "#ef4444", strokeWidth: 2.4 } } : { ...e, style: { ...(e.style || {}), stroke: undefined, strokeWidth: 1.6 } }));
   }
+
+  const highlightMatchedPath = useCallback((matchedPath?: { nodeIds: string[] }) => {
+    if (!matchedPath || !Array.isArray(matchedPath.nodeIds) || matchedPath.nodeIds.length < 2) return;
+    applyHighlightsFromPaths([matchedPath]);
+  }, [applyHighlightsFromPaths]);
+
+  const exportSingleMethod = useCallback((method: LlmAttackMethod) => {
+    try {
+      const filename = `llm-method-${(method.id || method.title || "method").replace(/\s+/g, "-").toLowerCase()}.json`;
+      const content = JSON.stringify(method, null, 2);
+      const blob = new Blob([content], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {}
+  }, []);
+
+  const severityBadge = (sev?: string) => {
+    const s = String(sev || "").toLowerCase();
+    const style: React.CSSProperties = {
+      display: "inline-block",
+      padding: "2px 6px",
+      borderRadius: 6,
+      fontSize: 10,
+      fontWeight: 700,
+      color: s === "low" ? "#065f46" : s === "medium" ? "#7c2d12" : s === "high" ? "#7f1d1d" : "#fff",
+      background: s === "low" ? "#d1fae5" : s === "medium" ? "#fde68a" : s === "high" ? "#fecaca" : "#ef4444",
+      border: "1px solid rgba(0,0,0,0.05)",
+    };
+    const label = s ? s.toUpperCase() : "N/A";
+    return <span style={style}>{label}</span>;
+  };
+
+  const columns = useMemo<ColumnDef<LlmAttackMethod>[]>(() => [
+    {
+      id: "severity",
+      header: () => "Severity",
+      accessorKey: "severity",
+      cell: ({ row }) => severityBadge(row.original.severity),
+      size: 100,
+    },
+    {
+      id: "title",
+      header: () => "Attack Method",
+      accessorKey: "title",
+      size: 240,
+      cell: ({ row }) => <div style={{ fontWeight: 600, color: "#111827" }}>{row.original.title}</div>,
+    },
+    {
+      id: "description",
+      header: () => "Description",
+      accessorKey: "description",
+      size: 420,
+      cell: ({ row }) => <div style={{ fontSize: 12, color: "#374151" }}>{row.original.description}</div>,
+    },
+    {
+      id: "confidence",
+      header: () => "Confidence",
+      accessorKey: "confidence",
+      size: 110,
+      cell: ({ row }) => {
+        const pct = Math.round(((row.original.confidence ?? 0) as number) * 100);
+        const color = pct >= 80 ? "#065f46" : pct >= 60 ? "#92400e" : "#991b1b";
+        return <span style={{ fontWeight: 600, color }}>{`${pct}%`}</span>;
+      },
+    },
+    {
+      id: "matchedPath",
+      header: () => "Attack Path",
+      accessorKey: "matchedPath",
+      size: 280,
+      cell: ({ row }) => {
+        const labels = row.original.matchedPath?.labels || [];
+        if (!labels.length) return <span style={{ color: "#9ca3af", fontSize: 12 }}>No path</span>;
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+            {labels.map((lb, i) => (
+              <span key={`${lb}-${i}`} style={{ background: "#e0f2fe", color: "#075985", padding: "2px 6px", borderRadius: 6, fontSize: 11 }}>
+                {lb}
+              </span>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: () => "Actions",
+      size: 160,
+      cell: ({ row }) => (
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => highlightMatchedPath(row.original.matchedPath)} style={{ fontSize: 12, color: "#2563eb" }}>Highlight</button>
+          <button onClick={() => exportSingleMethod(row.original)} style={{ fontSize: 12, color: "#374151" }}>Export</button>
+        </div>
+      ),
+    },
+  ], [exportSingleMethod, highlightMatchedPath]);
+
+  const table = useReactTable({ data: llmMethods ?? [], columns, getCoreRowModel: getCoreRowModel() });
 
   async function runMockAnalysisAndHighlight() {
     setAnalyzing(true);
@@ -410,13 +527,13 @@ export default function AttackPathApp() {
               body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }),
             });
             const json = await res.json();
-            const methods: AttackMethod[] = json?.methods || [];
-            if (!Array.isArray(methods) || methods.length === 0) { alert("No LLM-suggested methods."); return; }
-            const text = methods.map((m, i) => `${i + 1}. [${m.severity}] ${m.title} — ${m.description}`).join("\n\n");
-            alert(`LLM Suggested Methods:\n\n${text}`);
+            const methods: LlmAttackMethod[] = (json?.methods || []) as LlmAttackMethod[];
+            if (!Array.isArray(methods) || methods.length === 0) { alert("No LLM-suggested methods."); setLlmMethods([]); return; }
+            setLlmMethods(methods);
           } catch (e) {
             console.error(e);
             alert("Failed to fetch LLM-based methods");
+            setLlmMethods([]);
           }
         }}>LLM Methods</button>
         <button onClick={() => setShowLlmSettings(true)}>LLM Settings</button>
@@ -578,41 +695,80 @@ export default function AttackPathApp() {
       {SidebarAP}
       <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {Toolbar}
-        <div className="content" style={{ flex: 1, minHeight: 0 }}>
-          <div className="flow" style={{ height: "100%" }}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={(changes) => {
-                (onNodesChange as OnNodesChange)(changes);
-                setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
-              }}
-              onEdgesChange={onEdgesChange as OnEdgesChange}
-              onConnect={onConnect}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
-              nodeTypes={nodeTypes}
-              defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 1.6 } }}
-              fitView
-              deleteKeyCode={["Delete"]}
-              onSelectionChange={onSelectionChange}
-              onInit={setRfInstance}
-              onNodeContextMenu={onNodeContext}
-              onEdgeContextMenu={onEdgeContext}
-              onNodeDragStop={onNodeDragStop}
-            >
-              <Background gap={16} color="#f3f4f6" />
-              <MiniMap />
-              <Controls />
-            </ReactFlow>
+        <div className="content" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div className="flow" style={{ height: llmMethods && llmMethods.length > 0 ? "50%" : "100%" }}>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={(changes) => {
+                  (onNodesChange as OnNodesChange)(changes);
+                  setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
+                }}
+                onEdgesChange={onEdgesChange as OnEdgesChange}
+                onConnect={onConnect}
+                onDrop={onDrop}
+                onDragOver={onDragOver}
+                nodeTypes={nodeTypes}
+                defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 1.6 } }}
+                fitView
+                deleteKeyCode={["Delete"]}
+                onSelectionChange={onSelectionChange}
+                onInit={setRfInstance}
+                onNodeContextMenu={onNodeContext}
+                onEdgeContextMenu={onEdgeContext}
+                onNodeDragStop={onNodeDragStop}
+              >
+                <Background gap={16} color="#f3f4f6" />
+                <MiniMap />
+                <Controls />
+              </ReactFlow>
+            </div>
+            {llmMethods && llmMethods.length > 0 && (
+              <div style={{ flex: 1, overflow: "auto", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
+                <div style={{ padding: 8, display: "flex", alignItems: "center" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>LLM Suggested Attack Methods</div>
+                  <span style={{ flex: 1 }} />
+                  <button onClick={() => setLlmMethods([])} style={{ fontSize: 12 }}>Clear</button>
+                </div>
+                <div style={{ padding: "0 8px 8px 8px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      {table.getHeaderGroups().map((hg) => (
+                        <tr key={hg.id}>
+                          {hg.headers.map((header) => (
+                            <th key={header.id} style={{ textAlign: "left", fontSize: 12, color: "#6b7280", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>
+                              {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                            </th>
+                          ))}
+                        </tr>
+                      ))}
+                    </thead>
+                    <tbody>
+                      {table.getRowModel().rows.map((row) => (
+                        <tr key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <td key={cell.id} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top" }}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
-          <PropertiesPanel
-            kind={selectedKind}
-            nodeType={selectedNodeType}
-            data={selectedData}
-            onNodeChange={onNodeChangeData}
-            onEdgeChange={onEdgeChangeData}
-          />
+          <div style={{ width: 360, minWidth: 260, borderLeft: "1px solid #e5e7eb", background: "#fff", overflow: "auto" }}>
+            <PropertiesPanel
+              kind={selectedKind}
+              nodeType={selectedNodeType}
+              data={selectedData}
+              onNodeChange={onNodeChangeData}
+              onEdgeChange={onEdgeChangeData}
+            />
+          </div>
           {showLlmSettings && (
             <div style={{ position: "absolute", right: 16, top: 56, width: 360, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 10px 25px rgba(0,0,0,0.08)", padding: 12, zIndex: 10 }}>
               <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
