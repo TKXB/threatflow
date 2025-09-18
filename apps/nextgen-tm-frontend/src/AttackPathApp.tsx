@@ -18,6 +18,7 @@ import {
 import PropertiesPanel from "./PropertiesPanel";
 import ContextMenu from "./components/ContextMenu";
 import ActorNode from "./nodes/ActorNode";
+import EntryPointNode from "./nodes/EntryPointNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
@@ -61,6 +62,7 @@ export default function AttackPathApp() {
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
+      entryPoint: EntryPointNode,
       process: ProcessNode,
       store: StoreNode,
       trustBoundary: TrustBoundaryNode,
@@ -228,12 +230,14 @@ export default function AttackPathApp() {
 
       const label = customLabel
         || (type === "actor" ? (technology || "Actor")
+        : type === "entryPoint" ? (technology || "Entry Point")
         : type === "process" ? (technology || "Process")
         : type === "store" ? (technology || "Store")
         : "Trust Boundary");
 
       const sizeMap: Record<string, { width: number; height: number }> = {
         actor: { width: 64, height: 64 },
+        entryPoint: { width: 80, height: 80 },
         process: { width: 120, height: 60 },
         store: { width: 120, height: 70 },
         trustBoundary: { width: 260, height: 160 },
@@ -262,28 +266,28 @@ export default function AttackPathApp() {
         <div
           className="palette-item"
           draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "actor"); e.dataTransfer.setData("application/tm-node-tech", "wifi"); }}
+          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "entryPoint"); e.dataTransfer.setData("application/tm-node-tech", "wifi"); }}
         >
           📶 Wi-Fi
         </div>
         <div
           className="palette-item"
           draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "actor"); e.dataTransfer.setData("application/tm-node-tech", "ble"); }}
+          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "entryPoint"); e.dataTransfer.setData("application/tm-node-tech", "ble"); }}
         >
           📱 BLE
         </div>
         <div
           className="palette-item"
           draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "actor"); e.dataTransfer.setData("application/tm-node-tech", "uart"); }}
+          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "entryPoint"); e.dataTransfer.setData("application/tm-node-tech", "uart"); }}
         >
           🔌 UART
         </div>
         <div
           className="palette-item"
           draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "actor"); e.dataTransfer.setData("application/tm-node-tech", "jtag"); }}
+          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "entryPoint"); e.dataTransfer.setData("application/tm-node-tech", "jtag"); }}
         >
           🔧 JTAG
         </div>
@@ -456,7 +460,7 @@ export default function AttackPathApp() {
           // Demo graph: UART (Entry) -> Linux -> SPI Device (Target)
           const nid = (s: string) => s;
           const demoNodes: Node<any>[] = [
-            { id: nid("n_1"), type: "actor", position: { x: 80, y: 160 }, data: { label: "UART", technology: "uart", isEntry: "yes" }, width: 64, height: 64, zIndex: 1 },
+            { id: nid("n_1"), type: "entryPoint", position: { x: 80, y: 160 }, data: { label: "UART", technology: "uart", isEntry: "yes" }, width: 80, height: 80, zIndex: 1 },
             { id: nid("n_2"), type: "process", position: { x: 260, y: 150 }, data: { label: "Linux", technology: "linux", impact: "4" }, width: 120, height: 60, zIndex: 1 },
             { id: nid("n_3"), type: "store", position: { x: 480, y: 140 }, data: { label: "SPI Device", technology: "spi", isTarget: "yes", impact: "4" }, width: 120, height: 70, zIndex: 1 },
           ];
@@ -552,6 +556,7 @@ export default function AttackPathApp() {
   function getNodeRect(node: Node): { x: number; y: number; w: number; h: number } {
     const defaultSizes: Record<string, { w: number; h: number }> = {
       actor: { w: 64, h: 64 },
+      entryPoint: { w: 80, h: 80 },
       process: { w: 120, h: 60 },
       store: { w: 120, h: 70 },
       trustBoundary: { w: 260, h: 160 },
