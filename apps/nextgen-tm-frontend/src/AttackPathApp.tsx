@@ -291,7 +291,7 @@ export default function AttackPathApp() {
         >
           🔧 JTAG
         </div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>Goal Assets</div>
+        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>Assets</div>
         <div
           className="palette-item"
           draggable
@@ -302,7 +302,7 @@ export default function AttackPathApp() {
             e.dataTransfer.setData("application/tm-node-flags", JSON.stringify({ isTarget: "yes" }));
           }}
         >
-          🐧 Linux (Goal)
+          🐧 Linux
         </div>
         <div
           className="palette-item"
@@ -314,7 +314,7 @@ export default function AttackPathApp() {
             e.dataTransfer.setData("application/tm-node-flags", JSON.stringify({ isTarget: "yes" }));
           }}
         >
-          🔌 SPI Device (Goal)
+          🔌 SPI Device
         </div>
         <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>Logic</div>
         <div
@@ -330,42 +330,6 @@ export default function AttackPathApp() {
           onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "or-gate"); }}
         >
           ⚬ OR
-        </div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>Attack Steps</div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "recon"); }}
-        >
-          🔍 Reconnaissance
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "exploit"); }}
-        >
-          💥 Exploit
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "privilege-escalation"); }}
-        >
-          ⬆️ Privilege Escalation
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "lateral-movement"); }}
-        >
-          ↔️ Lateral Movement
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "store"); e.dataTransfer.setData("application/tm-node-tech", "target"); }}
-        >
-          🎯 Goal Asset
         </div>
       </div>
     ),
