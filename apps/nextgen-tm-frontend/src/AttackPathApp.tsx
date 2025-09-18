@@ -67,6 +67,7 @@ export default function AttackPathApp() {
   const [analyzing, setAnalyzing] = useState(false);
   const [lastScores, setLastScores] = useState<ScoredPath[] | null>(null);
   const [llmMethods, setLlmMethods] = useState<LlmAttackMethod[] | null>(null);
+  const [settingsHydrated, setSettingsHydrated] = useState(false);
   const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
   const [llmBaseUrl, setLlmBaseUrl] = useState<string>("http://127.0.0.1:4000/v1");
   const [llmApiKey, setLlmApiKey] = useState<string>("");
@@ -106,6 +107,16 @@ export default function AttackPathApp() {
     return Math.max(1, maxNum + 1);
   }
 
+  // Persist LLM settings explicitly when clicking Save
+  function saveLlmSettings() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
+      localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
+      localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
+    } catch {}
+    setShowLlmSettings(false);
+  }
+
   useEffect(() => {
     try {
       const savedNodes = safeParse<Node<BasicNodeData>[]>(localStorage.getItem(STORAGE_KEYS.nodes), []);
@@ -123,6 +134,7 @@ export default function AttackPathApp() {
       if (savedLlmBase) setLlmBaseUrl(savedLlmBase);
       if (savedLlmKey) setLlmApiKey(savedLlmKey);
       if (savedLlmModel) setLlmModel(savedLlmModel);
+      setSettingsHydrated(true);
     } catch {}
   }, []);
 
@@ -135,13 +147,14 @@ export default function AttackPathApp() {
   }, [nodes, edges, idSeq]);
 
   useEffect(() => {
+    if (!settingsHydrated) return;
     try {
       localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
       // 注意：API Key 存在本地仅用于演示，不建议用于生产
       localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
       localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
     } catch {}
-  }, [llmBaseUrl, llmApiKey, llmModel]);
+  }, [settingsHydrated, llmBaseUrl, llmApiKey, llmModel]);
 
   function download(filename: string, content: string, mime: string) {
     try {
@@ -790,7 +803,7 @@ export default function AttackPathApp() {
                   <input value={llmModel} onChange={(e) => setLlmModel(e.target.value)} placeholder="gpt-4o-mini" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
                 </label>
                 <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  <button onClick={() => setShowLlmSettings(false)}>Save</button>
+                  <button onClick={saveLlmSettings}>Save</button>
                 </div>
               </div>
             </div>
