@@ -113,48 +113,39 @@ function getEntryPointTheme(technology?: string) {
 export default memo(function EntryPointNode({ data }: { data: EntryPointData }) {
   const IconComponent = getEntryPointIcon(data.technology);
   const theme = getEntryPointTheme(data.technology);
-  
+
   return (
-    <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }}>
-      {/* Outer frame */}
+    <div
+      style={{
+        width: 80,
+        height: 80,
+        borderRadius: 12,
+        border: `2px solid ${theme.borderColor}`,
+        background: theme.bgColor,
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: 4,
+        padding: 8,
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+      }}
+    >
+      <IconComponent size={24} color={theme.iconColor} style={{ flexShrink: 0 }} />
       <div
         style={{
-          width: 80,
-          height: 80,
-          borderRadius: 12,
-          border: `2px solid ${theme.borderColor}`,
-          background: theme.bgColor,
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: 4,
-          padding: 8,
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        }}
-      >
-        {/* Icon above text */}
-        <IconComponent 
-          size={24} 
-          color={theme.iconColor}
-          style={{ flexShrink: 0 }}
-        />
-        
-        {/* Text below icon */}
-        <div style={{ 
-          fontSize: 10, 
+          fontSize: 10,
           color: theme.textColor,
           fontWeight: 600,
           textAlign: "center",
           lineHeight: 1.2,
           wordBreak: "break-word",
-          maxWidth: "100%"
-        }}>
-          {data.label}
-        </div>
+          maxWidth: "100%",
+        }}
+      >
+        {data.label}
       </div>
-      
       {/* Entry points typically only have outgoing connections */}
       <Handle type="source" position={Position.Right} />
     </div>
