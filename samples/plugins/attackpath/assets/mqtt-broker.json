@@ -1,0 +1,9 @@
+{
+  "id": "asset.mqtt.broker",
+  "label": "MQTT Broker",
+  "icon": "📡",
+  "type": "store",
+  "technology": "mqtt",
+  "priority": 30
+}
+

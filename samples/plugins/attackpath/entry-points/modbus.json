@@ -1,0 +1,9 @@
+{
+  "id": "entry.modbus",
+  "label": "Modbus",
+  "icon": "🏭",
+  "type": "entryPoint",
+  "technology": "modbus",
+  "priority": 90
+}
+

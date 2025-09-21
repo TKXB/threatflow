@@ -1,0 +1,9 @@
+{
+  "id": "entry.usb",
+  "label": "USB",
+  "icon": "🔋",
+  "type": "entryPoint",
+  "technology": "usb",
+  "priority": 10
+}
+

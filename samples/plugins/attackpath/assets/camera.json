@@ -1,0 +1,9 @@
+{
+  "id": "asset.camera.ip",
+  "label": "Camera",
+  "icon": "📷",
+  "type": "store",
+  "technology": "camera",
+  "priority": 40
+}
+

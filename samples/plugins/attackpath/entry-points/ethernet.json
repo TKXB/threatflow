@@ -1,0 +1,9 @@
+{
+  "id": "entry.ethernet",
+  "label": "Ethernet",
+  "icon": "🧷",
+  "type": "entryPoint",
+  "technology": "ethernet",
+  "priority": 20
+}
+

@@ -365,3 +365,107 @@ def analysis_methods_llm(req: LlmMethodsRequest) -> dict[str, Any]:
         logger.exception("LLM methods: failed | elapsed_ms=%d", int(elapsed * 1000))
         return {"ok": False, "error": str(ex), "methods": []}
 
+
+# ===== Plugins aggregation (Entry Points / Assets as standalone JSON files) =====
+
+def _env(name: str, default: str | None = None) -> str | None:
+    val = os.getenv(name)
+    return val if (val is not None and str(val).strip() != "") else default
+
+
+def _read_json_file(path: str) -> dict[str, Any] | None:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as ex:
+        logger.warning("Failed to read plugin file: %s error=%s", path, ex)
+        return None
+
+
+def _collect_plugins_from_dir(root: str) -> dict[str, list[dict[str, Any]]]:
+    result: dict[str, list[dict[str, Any]]] = {"entry": [], "assets": []}
+    try:
+        entry_dir = os.path.join(root, "entry-points")
+        assets_dir = os.path.join(root, "assets")
+        if os.path.isdir(entry_dir):
+            for fn in sorted(os.listdir(entry_dir)):
+                if not fn.lower().endswith(".json"):
+                    continue
+                data = _read_json_file(os.path.join(entry_dir, fn))
+                if isinstance(data, dict):
+                    result["entry"].append(data)
+        if os.path.isdir(assets_dir):
+            for fn in sorted(os.listdir(assets_dir)):
+                if not fn.lower().endswith(".json"):
+                    continue
+                data = _read_json_file(os.path.join(assets_dir, fn))
+                if isinstance(data, dict):
+                    result["assets"].append(data)
+    except Exception as ex:
+        logger.warning("Collect plugins failed: root=%s error=%s", root, ex)
+    return result
+
+
+def _validate_item(raw: dict[str, Any]) -> dict[str, Any] | None:
+    # minimal validation: require label and type
+    label = str(raw.get("label") or "").strip()
+    typ = str(raw.get("type") or "").strip()
+    if not label or not typ:
+        return None
+    # normalize fields
+    out: dict[str, Any] = {
+        "label": label,
+        "type": typ,
+    }
+    if raw.get("icon") is not None:
+        out["icon"] = raw.get("icon")
+    if raw.get("technology") is not None:
+        out["technology"] = raw.get("technology")
+    if raw.get("flags") is not None:
+        out["flags"] = raw.get("flags")
+    if raw.get("priority") is not None:
+        out["priority"] = raw.get("priority")
+    if raw.get("beta") is not None:
+        out["beta"] = raw.get("beta")
+    if raw.get("legacy") is not None:
+        out["legacy"] = raw.get("legacy")
+    if raw.get("id") is not None:
+        out["id"] = raw.get("id")
+    return out
+
+
+@app.get("/api/palette/plugins")
+def get_palette_plugins() -> dict[str, Any]:
+    # Discover roots: env only (simple, explicit). Users can set TF_PLUGIN_DIR
+    # Example: TF_PLUGIN_DIR=/data/plugins/attackpath
+    roots: list[str] = []
+    env_root = _env("TF_PLUGIN_DIR")
+    if env_root:
+        roots.append(env_root)
+
+    all_entry: list[dict[str, Any]] = []
+    all_assets: list[dict[str, Any]] = []
+
+    for r in roots:
+        coll = _collect_plugins_from_dir(r)
+        all_entry.extend([x for x in coll.get("entry", []) if isinstance(x, dict)])
+        all_assets.extend([x for x in coll.get("assets", []) if isinstance(x, dict)])
+
+    def prepare_section(title: str, items_raw: list[dict[str, Any]]):
+        items: list[dict[str, Any]] = []
+        for raw in items_raw:
+            v = _validate_item(raw)
+            if v:
+                items.append(v)
+        # sort by priority then label
+        items.sort(key=lambda x: (int(x.get("priority", 1e9)), str(x.get("label", "").lower())))
+        return {"title": title, "items": items}
+
+    sections: list[dict[str, Any]] = []
+    if all_entry:
+        sections.append(prepare_section("Entry Point", all_entry))
+    if all_assets:
+        sections.append(prepare_section("Assets", all_assets))
+
+    return {"ok": True, "sections": sections}
+

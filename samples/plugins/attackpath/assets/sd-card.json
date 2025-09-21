@@ -1,0 +1,9 @@
+{
+  "id": "asset.sd.card",
+  "label": "SD Card",
+  "icon": "💾",
+  "type": "store",
+  "technology": "sd-card",
+  "priority": 50
+}
+

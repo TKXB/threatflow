@@ -1,0 +1,9 @@
+{
+  "id": "asset.mobile.app",
+  "label": "Mobile App",
+  "icon": "📱",
+  "type": "store",
+  "technology": "mobile-app",
+  "priority": 100
+}
+

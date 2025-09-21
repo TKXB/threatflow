@@ -1,0 +1,9 @@
+{
+  "id": "entry.can",
+  "label": "CAN Bus",
+  "icon": "🚗",
+  "type": "entryPoint",
+  "technology": "can",
+  "priority": 80
+}
+

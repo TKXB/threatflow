@@ -1,0 +1,10 @@
+{
+  "id": "asset.web.http",
+  "label": "Web Server",
+  "icon": "🌐",
+  "type": "store",
+  "technology": "http",
+  "flags": { "publicNetwork": "yes" },
+  "priority": 20
+}
+

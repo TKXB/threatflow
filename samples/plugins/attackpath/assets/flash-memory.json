@@ -1,0 +1,9 @@
+{
+  "id": "asset.flash.memory",
+  "label": "Flash Memory",
+  "icon": "💽",
+  "type": "store",
+  "technology": "flash",
+  "priority": 60
+}
+

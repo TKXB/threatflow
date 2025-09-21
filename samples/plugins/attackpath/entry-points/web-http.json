@@ -1,0 +1,9 @@
+{
+  "id": "entry.web.http",
+  "label": "Web (HTTP)",
+  "icon": "🌐",
+  "type": "entryPoint",
+  "technology": "http",
+  "priority": 30
+}
+

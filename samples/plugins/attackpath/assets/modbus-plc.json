@@ -1,0 +1,9 @@
+{
+  "id": "asset.modbus.plc",
+  "label": "Modbus PLC",
+  "icon": "🏭",
+  "type": "store",
+  "technology": "plc",
+  "priority": 70
+}
+

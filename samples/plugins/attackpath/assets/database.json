@@ -1,0 +1,10 @@
+{
+  "id": "asset.database.postgres",
+  "label": "Database",
+  "icon": "🗄️",
+  "type": "store",
+  "technology": "postgres",
+  "flags": { "impact": "4" },
+  "priority": 10
+}
+

@@ -30,6 +30,21 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
+// Palette configuration (runtime-pluggable)
+type PaletteItem = {
+  id?: string;
+  label: string;
+  icon?: string;
+  type: string; // actor | entryPoint | process | store | trustBoundary
+  technology?: string;
+  flags?: Record<string, any>;
+  priority?: number;
+  beta?: boolean;
+  legacy?: boolean;
+};
+type PaletteSection = { title: string; items: PaletteItem[] };
+type PaletteConfig = { sections: PaletteSection[] };
+
 // More permissive type for LLM output (can include "critical")
 type LlmAttackMethod = {
   id?: string;
@@ -73,6 +88,9 @@ export default function AttackPathApp() {
   const [llmApiKey, setLlmApiKey] = useState<string>("");
   const [llmModel, setLlmModel] = useState<string>("gpt-4o-mini");
   const [showLlmSettings, setShowLlmSettings] = useState(false);
+  const [paletteConfig, setPaletteConfig] = useState<PaletteConfig | null>(null);
+  const [paletteError, setPaletteError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -91,6 +109,7 @@ export default function AttackPathApp() {
     llmBase: "tf_llm_base_url",
     llmKey: "tf_llm_api_key",
     llmModel: "tf_llm_model",
+    paletteJson: "tf_palette_json",
   } as const;
 
   function safeParse<T>(text: string | null, fallback: T): T {
@@ -155,6 +174,80 @@ export default function AttackPathApp() {
       localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
     } catch {}
   }, [settingsHydrated, llmBaseUrl, llmApiKey, llmModel]);
+
+  // ----- Palette loading chain: LocalStorage > Backend plugins > Default file -----
+  async function loadPaletteFromLocal(): Promise<PaletteConfig | null> {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.paletteJson);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.sections)) return parsed as PaletteConfig;
+    } catch {}
+    return null;
+  }
+
+  async function loadPaletteFromBackend(): Promise<PaletteConfig | null> {
+    try {
+      const res = await fetch(`${API}/api/palette/plugins`, { headers: { "accept": "application/json" } });
+      const json = await res.json();
+      const sections = Array.isArray(json?.sections) ? json.sections : [];
+      if (sections.length > 0) return { sections } as PaletteConfig;
+    } catch (e) {
+      console.warn("Failed to load backend plugins palette", e);
+    }
+    return null;
+  }
+
+  async function loadDefaultPalette(): Promise<PaletteConfig | null> {
+    try {
+      const res = await fetch(`/palette.json?ts=${Date.now()}`);
+      const json = await res.json();
+      if (json && Array.isArray(json.sections)) return json as PaletteConfig;
+    } catch (e) {
+      console.warn("Failed to load default palette.json", e);
+    }
+    return null;
+  }
+
+  async function loadPalette() {
+    setPaletteError(null);
+    let loaded: PaletteConfig | null = await loadPaletteFromLocal();
+    if (!loaded) loaded = await loadPaletteFromBackend();
+    if (!loaded) loaded = await loadDefaultPalette();
+    if (loaded) {
+      setPaletteConfig(loaded);
+    } else {
+      setPaletteConfig({ sections: [] });
+      setPaletteError("No palette available. Please import a JSON.");
+    }
+  }
+
+  function triggerImport() { try { fileInputRef.current?.click(); } catch {} }
+  function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result || "");
+        const parsed = JSON.parse(text);
+        if (!parsed || !Array.isArray(parsed.sections)) throw new Error("Invalid palette JSON");
+        localStorage.setItem(STORAGE_KEYS.paletteJson, text);
+        setPaletteConfig(parsed as PaletteConfig);
+        setPaletteError(null);
+      } catch (err) {
+        setPaletteError("Invalid palette JSON");
+      } finally {
+        try { (e.target as HTMLInputElement).value = ""; } catch {}
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function reloadPalette() { await loadPalette(); }
+  async function resetPalette() { try { localStorage.removeItem(STORAGE_KEYS.paletteJson); } catch {}; await loadPalette(); }
+
+  useEffect(() => { void loadPalette(); }, []);
 
   function download(filename: string, content: string, mime: string) {
     try {
@@ -392,78 +485,41 @@ export default function AttackPathApp() {
     () => (
       <div className="sidebar">
         <h3>Attack Path Palette</h3>
-        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>Entry Point</div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "entryPoint"); e.dataTransfer.setData("application/tm-node-tech", "wifi"); }}
-        >
-          📶 Wi-Fi
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+          <button onClick={triggerImport}>Import JSON</button>
+          <button onClick={() => { void reloadPalette(); }}>Reload</button>
+          <button onClick={() => { void resetPalette(); }}>Reset Default</button>
+          <input ref={fileInputRef} onChange={onFileSelected} type="file" accept="application/json" style={{ display: "none" }} />
         </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "entryPoint"); e.dataTransfer.setData("application/tm-node-tech", "ble"); }}
-        >
-          📱 BLE
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "entryPoint"); e.dataTransfer.setData("application/tm-node-tech", "uart"); }}
-        >
-          🔌 UART
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "entryPoint"); e.dataTransfer.setData("application/tm-node-tech", "jtag"); }}
-        >
-          🔧 JTAG
-        </div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>Assets</div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("application/tm-node", "store");
-            e.dataTransfer.setData("application/tm-node-tech", "linux");
-            e.dataTransfer.setData("application/tm-node-label", "Linux Target");
-            e.dataTransfer.setData("application/tm-node-flags", JSON.stringify({ isTarget: "yes" }));
-          }}
-        >
-          🐧 Linux
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("application/tm-node", "store");
-            e.dataTransfer.setData("application/tm-node-tech", "spi");
-            e.dataTransfer.setData("application/tm-node-label", "SPI Device");
-            e.dataTransfer.setData("application/tm-node-flags", JSON.stringify({ isTarget: "yes" }));
-          }}
-        >
-          🔌 SPI Device
-        </div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>Logic</div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "and-gate"); }}
-        >
-          ⚬ AND
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "or-gate"); }}
-        >
-          ⚬ OR
-        </div>
+        {paletteError && (
+          <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
+        )}
+        {!paletteError && !paletteConfig && (
+          <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
+        )}
+        {paletteConfig && paletteConfig.sections?.map((section, si) => (
+          <div key={`sec-${si}`}>
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: si === 0 ? 6 : 12 }}>{section.title}</div>
+            {section.items?.map((it, ii) => (
+              <div
+                key={`item-${si}-${ii}-${it.label}`}
+                className="palette-item"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/tm-node", it.type);
+                  if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
+                  if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                  if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
+                }}
+              >
+                <span style={{ marginRight: 6 }}>{it.icon || ""}</span>{it.label}
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     ),
-    []
+    [paletteConfig, paletteError]
   );
 
   const Toolbar = useMemo(

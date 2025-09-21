@@ -1,0 +1,9 @@
+{
+  "id": "entry.zigbee",
+  "label": "Zigbee",
+  "icon": "🕸️",
+  "type": "entryPoint",
+  "technology": "zigbee",
+  "priority": 60
+}
+

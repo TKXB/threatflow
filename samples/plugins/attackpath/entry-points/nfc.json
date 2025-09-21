@@ -1,0 +1,9 @@
+{
+  "id": "entry.nfc",
+  "label": "NFC",
+  "icon": "📳",
+  "type": "entryPoint",
+  "technology": "nfc",
+  "priority": 50
+}
+

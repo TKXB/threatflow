@@ -1,0 +1,9 @@
+{
+  "id": "entry.lorawan",
+  "label": "LoRaWAN",
+  "icon": "📶",
+  "type": "entryPoint",
+  "technology": "lorawan",
+  "priority": 70
+}
+
