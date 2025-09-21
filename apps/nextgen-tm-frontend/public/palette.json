@@ -18,23 +18,7 @@
         { "label": "Modbus", "icon": "🏭", "type": "entryPoint", "technology": "modbus" }
       ]
     },
-    {
-      "title": "Assets",
-      "items": [
-        { "label": "Linux Target", "icon": "🐧", "type": "store", "technology": "linux", "flags": { "isTarget": "yes" }, "priority": 1 },
-        { "label": "SPI Device", "icon": "🔌", "type": "store", "technology": "spi", "flags": { "isTarget": "yes" } },
-        { "label": "Database", "icon": "🗄️", "type": "store", "technology": "postgres" },
-        { "label": "Web Server", "icon": "🌐", "type": "store", "technology": "http" },
-        { "label": "MQTT Broker", "icon": "📡", "type": "store", "technology": "mqtt" },
-        { "label": "Camera", "icon": "📷", "type": "store", "technology": "camera" },
-        { "label": "SD Card", "icon": "💾", "type": "store", "technology": "sd-card" },
-        { "label": "Flash Memory", "icon": "💽", "type": "store", "technology": "flash" },
-        { "label": "Modbus PLC", "icon": "🏭", "type": "store", "technology": "plc" },
-        { "label": "CAN Bus Node", "icon": "🚗", "type": "store", "technology": "can" },
-        { "label": "Cloud Storage", "icon": "☁️", "type": "store", "technology": "s3" },
-        { "label": "Mobile App", "icon": "📱", "type": "store", "technology": "mobile-app" }
-      ]
-    },
+    
     {
       "title": "Logic",
       "items": [

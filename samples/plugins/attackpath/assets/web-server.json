@@ -4,7 +4,74 @@
   "icon": "🌐",
   "type": "store",
   "technology": "http",
-  "flags": { "publicNetwork": "yes" },
+  "flags": {
+    "publicNetwork": "yes",
+    "properties": [
+      {
+        "key": "framework",
+        "label": "Framework",
+        "type": "select",
+        "options": [
+          { "value": "nginx", "label": "Nginx" },
+          { "value": "apache", "label": "Apache" },
+          { "value": "express", "label": "Express" },
+          { "value": "spring", "label": "Spring" }
+        ],
+        "default": "nginx"
+      },
+      { "key": "version", "label": "Version", "type": "input", "default": "latest" },
+      {
+        "key": "tlsEnabled",
+        "label": "TLS Enabled",
+        "type": "select",
+        "options": [ { "value": "yes", "label": "Yes" }, { "value": "no", "label": "No" } ],
+        "default": "yes"
+      },
+      {
+        "key": "hsts",
+        "label": "HSTS",
+        "type": "select",
+        "options": [ { "value": "enabled", "label": "Enabled" }, { "value": "disabled", "label": "Disabled" } ],
+        "default": "enabled"
+      },
+      {
+        "key": "corsPolicy",
+        "label": "CORS Policy",
+        "type": "select",
+        "options": [
+          { "value": "same-origin", "label": "Same-Origin" },
+          { "value": "restricted", "label": "Restricted" },
+          { "value": "open", "label": "Open" }
+        ],
+        "default": "restricted"
+      },
+      {
+        "key": "authn",
+        "label": "Authentication",
+        "type": "select",
+        "options": [
+          { "value": "none", "label": "None" },
+          { "value": "basic", "label": "Basic" },
+          { "value": "oauth2", "label": "OAuth2" },
+          { "value": "oidc", "label": "OIDC" }
+        ],
+        "default": "none"
+      },
+      {
+        "key": "waf",
+        "label": "WAF",
+        "type": "select",
+        "options": [ { "value": "enabled", "label": "Enabled" }, { "value": "disabled", "label": "Disabled" } ],
+        "default": "disabled"
+      },
+      {
+        "key": "rateLimit",
+        "label": "Rate Limit (req/min)",
+        "type": "input",
+        "default": "600"
+      }
+    ]
+  },
   "priority": 20
 }
 

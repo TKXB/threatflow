@@ -415,6 +415,13 @@ def _collect_plugins_from_dir(root: str) -> dict[str, list[dict[str, Any]]]:
     return result
 
 
+def _default_plugins_root() -> str:
+    # Resolve repo-root-relative samples/plugins/attackpath as a sensible default
+    here = os.path.dirname(__file__)
+    repo_root = os.path.abspath(os.path.join(here, "../../../../.."))
+    return os.path.join(repo_root, "samples", "plugins", "attackpath")
+
+
 def _validate_item(raw: dict[str, Any]) -> dict[str, Any] | None:
     # minimal validation: require label and type
     label = str(raw.get("label") or "").strip()
@@ -451,6 +458,10 @@ def get_palette_plugins() -> dict[str, Any]:
     env_root = _env("TF_PLUGIN_DIR")
     if env_root:
         roots.append(env_root)
+    # Fallback to repo default if env not provided
+    default_root = _default_plugins_root()
+    if os.path.isdir(default_root):
+        roots.append(default_root)
 
     all_entry: list[dict[str, Any]] = []
     all_assets: list[dict[str, Any]] = []

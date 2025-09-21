@@ -41,6 +41,7 @@ type PaletteItem = {
   priority?: number;
   beta?: boolean;
   legacy?: boolean;
+  properties?: Array<{ key: string; label: string; type: string; options?: { value: string; label: string }[]; default?: string }>;
 };
 type PaletteSection = { title: string; items: PaletteItem[] };
 type PaletteConfig = { sections: PaletteSection[] };
@@ -211,12 +212,38 @@ export default function AttackPathApp() {
 
   async function loadPalette() {
     setPaletteError(null);
-    let loaded: PaletteConfig | null = await loadPaletteFromLocal();
-    if (!loaded) loaded = await loadPaletteFromBackend();
-    if (!loaded) loaded = await loadDefaultPalette();
-    if (loaded) {
-      setPaletteConfig(loaded);
-    } else {
+    const [loc, backend, deflt] = await Promise.all([
+      loadPaletteFromLocal(),
+      loadPaletteFromBackend(),
+      loadDefaultPalette(),
+    ]);
+    const sources: (PaletteConfig | null)[] = [deflt, backend, loc];
+    const sections: PaletteSection[] = [];
+    const pushAll = (src?: PaletteConfig | null) => {
+      if (!src || !Array.isArray(src.sections)) return;
+      for (const s of src.sections) {
+        const idx = sections.findIndex((x) => x.title === s.title);
+        if (idx === -1) {
+          sections.push({ title: s.title, items: [...(s.items || [])] });
+        } else {
+          const seen = new Set(
+            sections[idx].items.map((it) => `${String((it as any).type)}|${String((it as any).technology || '')}|${String((it as any).label || '')}`)
+          );
+          for (const it of s.items || []) {
+            const key = `${String((it as any).type)}|${String((it as any).technology || '')}|${String((it as any).label || '')}`;
+            if (!seen.has(key)) {
+              sections[idx].items.push(it as any);
+              seen.add(key);
+            }
+          }
+        }
+      }
+    };
+    // Merge in order: default -> backend -> local (local can add/override)
+    for (const src of sources) pushAll(src);
+    const loaded: PaletteConfig | null = sections.length > 0 ? { sections } : null;
+    if (loaded) setPaletteConfig(loaded);
+    else {
       setPaletteConfig({ sections: [] });
       setPaletteError("No palette available. Please import a JSON.");
     }
@@ -438,8 +465,11 @@ export default function AttackPathApp() {
       const technology = event.dataTransfer.getData("application/tm-node-tech");
       const customLabel = event.dataTransfer.getData("application/tm-node-label");
       const flagsRaw = event.dataTransfer.getData("application/tm-node-flags");
+      const propsRaw = event.dataTransfer.getData("application/tm-node-props");
       let extraFlags: Record<string, any> | undefined;
+      let extraProps: any[] | undefined;
       try { extraFlags = flagsRaw ? JSON.parse(flagsRaw) : undefined; } catch { extraFlags = undefined; }
+      try { extraProps = propsRaw ? JSON.parse(propsRaw) : undefined; } catch { extraProps = undefined; }
       if (!type) return;
 
       const flowPoint = rfInstance
@@ -468,9 +498,19 @@ export default function AttackPathApp() {
       const sz = sizeMap[type] || { width: 100, height: 60 };
       const position = { x: flowPoint.x - sz.width / 2, y: flowPoint.y - sz.height / 2 };
 
+      // Attach dynamic property definitions for assets if provided by palette/plugins
+      // prefer explicit properties payload; also support legacy __dynamicProps in flags
+      const dynamicProps = Array.isArray(extraProps)
+        ? extraProps
+        : (extraFlags && Array.isArray((extraFlags as any).properties))
+          ? (extraFlags as any).properties
+          : (extraFlags && Array.isArray((extraFlags as any).__dynamicProps))
+            ? (extraFlags as any).__dynamicProps
+            : undefined;
+
       setNodes((nds) => [
         ...nds,
-        { id, position, data: { label, technology: technology || undefined, ...(extraFlags || {}) }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 },
+        { id, position, data: { label, technology: technology || undefined, ...(extraFlags || {}), ...(dynamicProps ? { properties: dynamicProps } : {}) }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 },
       ]);
     },
     [idSeq, rfInstance]
@@ -510,6 +550,7 @@ export default function AttackPathApp() {
                   if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
                   if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
                   if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
+                  if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
                 }}
               >
                 <span style={{ marginRight: 6 }}>{it.icon || ""}</span>{it.label}
@@ -631,6 +672,33 @@ export default function AttackPathApp() {
   const onSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
     if (params.nodes.length === 1) {
       const n = params.nodes[0] as any;
+      // Backfill properties for assets if missing by looking up from current palette
+      if (n.type === "store" && (!Array.isArray(n.data?.properties) || n.data?.properties.length === 0)) {
+        const tech = String(n.data?.technology || "").toLowerCase();
+        const label = String(n.data?.label || "");
+        let defs: any[] | undefined;
+        if (paletteConfig && Array.isArray(paletteConfig.sections)) {
+          for (const section of paletteConfig.sections) {
+            for (const item of section.items || []) {
+              if (String(item.type) === "store") {
+                const itTech = String(item.technology || "").toLowerCase();
+                if ((itTech && itTech === tech) || (!itTech && item.label === label)) {
+                  defs = (item as any).properties || (item as any).flags?.properties || undefined;
+                  if (Array.isArray(defs)) break;
+                }
+              }
+            }
+            if (defs) break;
+          }
+        }
+        if (Array.isArray(defs) && defs.length > 0) {
+          setNodes((nds) => nds.map((node) => node.id === n.id ? { ...node, data: { ...(node as any).data, properties: defs } } : node));
+          setSelectedData({ ...(n.data || {}), properties: defs });
+          setSelectedKind("node");
+          setSelectedNodeType(n.type);
+          return;
+        }
+      }
       setSelectedKind("node");
       setSelectedNodeType(n.type);
       setSelectedData(n.data || {});
@@ -644,7 +712,7 @@ export default function AttackPathApp() {
       setSelectedNodeType(undefined);
       setSelectedData(undefined);
     }
-  }, []);
+  }, [paletteConfig, setNodes]);
 
   const onNodeChangeData = useCallback((updates: Record<string, any>) => {
     setNodes((nds) =>

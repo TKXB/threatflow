@@ -4,7 +4,45 @@
   "icon": "🗄️",
   "type": "store",
   "technology": "postgres",
-  "flags": { "impact": "4" },
+  "flags": {
+    "impact": "4",
+    "isTarget": "yes",
+    "properties": [
+      {
+        "key": "engine",
+        "label": "Engine",
+        "type": "select",
+        "options": [
+          { "value": "postgres", "label": "PostgreSQL" },
+          { "value": "mysql", "label": "MySQL" },
+          { "value": "mariadb", "label": "MariaDB" },
+          { "value": "sqlite", "label": "SQLite" }
+        ],
+        "default": "postgres"
+      },
+      { "key": "version", "label": "Version", "type": "input", "default": "16" },
+      {
+        "key": "port",
+        "label": "Port",
+        "type": "input",
+        "default": "5432"
+      },
+      {
+        "key": "encryptedAtRest",
+        "label": "Encrypted at Rest",
+        "type": "select",
+        "options": [ { "value": "yes", "label": "Yes" }, { "value": "no", "label": "No" } ],
+        "default": "yes"
+      },
+      {
+        "key": "containsPII",
+        "label": "Contains PII",
+        "type": "select",
+        "options": [ { "value": "no", "label": "No" }, { "value": "yes", "label": "Yes" } ],
+        "default": "no"
+      }
+    ]
+  },
   "priority": 10
 }
 

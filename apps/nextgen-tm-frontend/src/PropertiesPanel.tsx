@@ -65,6 +65,37 @@ export type PanelProps = {
   onEdgeChange: (updates: Record<string, any>) => void;
 };
 
+type DynamicFieldDef = { key: string; label: string; type: string; options?: { value: string; label: string }[]; default?: string };
+
+function DynamicFields({ defs, data, onChange }: { defs: DynamicFieldDef[]; data?: Record<string, any>; onChange: (updates: Record<string, any>) => void }) {
+  if (!defs || defs.length === 0) return null;
+  return (
+    <>
+      {defs.map((f) => {
+        if (f.type === "select") {
+          return (
+            <RowSelect
+              key={f.key}
+              label={f.label}
+              value={(data?.[f.key] ?? f.default ?? "").toString()}
+              options={f.options ?? []}
+              onChange={(v) => onChange({ [f.key]: v })}
+            />
+          );
+        }
+        return (
+          <RowInput
+            key={f.key}
+            label={f.label}
+            value={(data?.[f.key] ?? f.default ?? "").toString()}
+            onChange={(v) => onChange({ [f.key]: v })}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChange, onEdgeChange }: PanelProps) {
   if (!kind) {
     return (
@@ -152,30 +183,12 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
       case "store":
         return (
           <div className="right-panel">
-            <h3>Data Store</h3>
+            <h3>Asset</h3>
             <RowInput
               label="Label"
               value={data?.label ?? ""}
-              placeholder="Store label"
+              placeholder="Asset label"
               onChange={(v) => onNodeChange({ label: v })}
-            />
-            <RowSelect
-              label="Contains PII"
-              value={data?.containsPII ?? "no"}
-              options={[
-                { value: "no", label: "No" },
-                { value: "yes", label: "Yes" },
-              ]}
-              onChange={(v) => onNodeChange({ containsPII: v })}
-            />
-            <RowSelect
-              label="Encrypted at Rest"
-              value={data?.encryptedAtRest ?? "yes"}
-              options={[
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-              ]}
-              onChange={(v) => onNodeChange({ encryptedAtRest: v })}
             />
             <RowSelect
               label="Target"
@@ -198,6 +211,9 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
               ]}
               onChange={(v) => onNodeChange({ impact: v })}
             />
+            {Array.isArray((data as any)?.properties) && (
+              <DynamicFields defs={(data as any).properties as any} data={data} onChange={onNodeChange} />
+            )}
           </div>
         );
       case "trustBoundary":
