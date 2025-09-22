@@ -1,25 +1,6 @@
 {
   "sections": [
     {
-      "title": "Entry Point",
-      "items": [
-        { "label": "Wi‑Fi", "icon": "📶", "type": "entryPoint", "technology": "wifi", "priority": 1 },
-        { "label": "BLE", "icon": "📱", "type": "entryPoint", "technology": "ble" },
-        { "label": "UART", "icon": "🔌", "type": "entryPoint", "technology": "uart" },
-        { "label": "JTAG", "icon": "🔧", "type": "entryPoint", "technology": "jtag" },
-        { "label": "USB", "icon": "🔋", "type": "entryPoint", "technology": "usb" },
-        { "label": "Ethernet", "icon": "🧷", "type": "entryPoint", "technology": "ethernet" },
-        { "label": "Web (HTTP)", "icon": "🌐", "type": "entryPoint", "technology": "http" },
-        { "label": "MQTT", "icon": "📡", "type": "entryPoint", "technology": "mqtt" },
-        { "label": "NFC", "icon": "📳", "type": "entryPoint", "technology": "nfc" },
-        { "label": "Zigbee", "icon": "🕸️", "type": "entryPoint", "technology": "zigbee" },
-        { "label": "LoRaWAN", "icon": "📶", "type": "entryPoint", "technology": "lorawan" },
-        { "label": "CAN Bus", "icon": "🚗", "type": "entryPoint", "technology": "can" },
-        { "label": "Modbus", "icon": "🏭", "type": "entryPoint", "technology": "modbus" }
-      ]
-    },
-    
-    {
       "title": "Logic",
       "items": [
         { "label": "AND", "icon": "⚬", "type": "process", "technology": "and-gate" },

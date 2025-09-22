@@ -1,0 +1,8 @@
+{
+  "id": "entry.jtag",
+  "label": "JTAG",
+  "icon": "🔧",
+  "type": "entryPoint",
+  "technology": "jtag",
+  "priority": 50
+}

@@ -4,6 +4,14 @@
   "icon": "📡",
   "type": "entryPoint",
   "technology": "mqtt",
+  "priority": 65
+}
+{
+  "id": "entry.mqtt",
+  "label": "MQTT",
+  "icon": "📡",
+  "type": "entryPoint",
+  "technology": "mqtt",
   "priority": 40
 }
 

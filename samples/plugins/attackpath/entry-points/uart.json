@@ -1,0 +1,8 @@
+{
+  "id": "entry.uart",
+  "label": "UART",
+  "icon": "🔌",
+  "type": "entryPoint",
+  "technology": "uart",
+  "priority": 40
+}

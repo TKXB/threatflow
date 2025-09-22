@@ -4,6 +4,14 @@
   "icon": "📳",
   "type": "entryPoint",
   "technology": "nfc",
+  "priority": 15
+}
+{
+  "id": "entry.nfc",
+  "label": "NFC",
+  "icon": "📳",
+  "type": "entryPoint",
+  "technology": "nfc",
   "priority": 50
 }
 

@@ -4,6 +4,14 @@
   "icon": "🔋",
   "type": "entryPoint",
   "technology": "usb",
+  "priority": 60
+}
+{
+  "id": "entry.usb",
+  "label": "USB",
+  "icon": "🔋",
+  "type": "entryPoint",
+  "technology": "usb",
   "priority": 10
 }
 

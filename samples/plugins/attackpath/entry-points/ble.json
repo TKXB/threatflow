@@ -1,0 +1,8 @@
+{
+  "id": "entry.ble",
+  "label": "BLE",
+  "icon": "📱",
+  "type": "entryPoint",
+  "technology": "ble",
+  "priority": 30
+}

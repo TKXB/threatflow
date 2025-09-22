@@ -1,0 +1,8 @@
+{
+  "id": "entry.wifi",
+  "label": "Wi‑Fi",
+  "icon": "📶",
+  "type": "entryPoint",
+  "technology": "wifi",
+  "priority": 10
+}
