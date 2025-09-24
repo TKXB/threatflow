@@ -27,7 +27,7 @@ import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server } from "lucide-react";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -288,6 +288,21 @@ export default function AttackPathApp() {
       toggleSection(title);
     }
   }, [toggleSection]);
+
+  function getIconForItem(it: PaletteItem) {
+    const label = String(it.label || "").toLowerCase();
+    const tech = String(it.technology || "").toLowerCase();
+    const text = `${label} ${tech}`;
+    if (/wifi|wi[- ]?fi/.test(text)) return Wifi;
+    if (/http|web\b|browser/.test(text)) return Globe;
+    if (/ethernet|lan|cable/.test(text)) return Cable;
+    if (/db|database|store|bucket/.test(text)) return DbIcon;
+    if (/user|actor|person|human/.test(text)) return User;
+    if (/boundary|trust|security|shield/.test(text)) return Shield;
+    if (/cpu|spi|uart|i2c|hardware/.test(text)) return Cpu;
+    if (/server|service|process|app/.test(text)) return Server;
+    return Box;
+  }
 
   function download(filename: string, content: string, mime: string) {
     try {
@@ -567,6 +582,7 @@ export default function AttackPathApp() {
                 <div
                   key={`item-${si}-${ii}-${it.label}`}
                   className="palette-item"
+                  data-type={it.type}
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.setData("application/tm-node", it.type);
@@ -576,7 +592,17 @@ export default function AttackPathApp() {
                     if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
                   }}
                 >
-                  <span style={{ marginRight: 6 }}>{it.icon || ""}</span>{it.label}
+                  {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                  <div className="pi-text">
+                    <div className="pi-label">{it.label}</div>
+                    {it.technology && it.technology !== it.label && (
+                      <div className="pi-meta">{String(it.technology)}</div>
+                    )}
+                  </div>
+                  <div className="pi-tags">
+                    {it.beta ? <span className="pi-tag pi-tag-beta">Beta</span> : null}
+                    {it.legacy ? <span className="pi-tag pi-tag-legacy">Legacy</span> : null}
+                  </div>
                 </div>
               ))}
             </div>
