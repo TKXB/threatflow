@@ -27,6 +27,7 @@ import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { ChevronRight } from "lucide-react";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -91,6 +92,7 @@ export default function AttackPathApp() {
   const [showLlmSettings, setShowLlmSettings] = useState(false);
   const [paletteConfig, setPaletteConfig] = useState<PaletteConfig | null>(null);
   const [paletteError, setPaletteError] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const nodeTypes = useMemo(
     () => ({
@@ -275,6 +277,17 @@ export default function AttackPathApp() {
   async function resetPalette() { try { localStorage.removeItem(STORAGE_KEYS.paletteJson); } catch {}; await loadPalette(); }
 
   useEffect(() => { void loadPalette(); }, []);
+
+  const toggleSection = useCallback((title: string) => {
+    setOpenSections((prev) => prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]);
+  }, []);
+
+  const handleSectionKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, title: string) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleSection(title);
+    }
+  }, [toggleSection]);
 
   function download(filename: string, content: string, mime: string) {
     try {
@@ -538,29 +551,40 @@ export default function AttackPathApp() {
           <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
         )}
         {paletteConfig && paletteConfig.sections?.map((section, si) => (
-          <div key={`sec-${si}`}>
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: si === 0 ? 6 : 12 }}>{section.title}</div>
-            {section.items?.map((it, ii) => (
-              <div
-                key={`item-${si}-${ii}-${it.label}`}
-                className="palette-item"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("application/tm-node", it.type);
-                  if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
-                  if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
-                  if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
-                  if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
-                }}
-              >
-                <span style={{ marginRight: 6 }}>{it.icon || ""}</span>{it.label}
-              </div>
-            ))}
+          <div key={`sec-${si}`} className="disclosure-section">
+            <div
+              className={`disclosure-header ${openSections.includes(section.title) ? "open" : ""}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => toggleSection(section.title)}
+              onKeyDown={(e) => handleSectionKeyDown(e, section.title)}
+            >
+              <span className="disclosure-title">{section.title}</span>
+              <ChevronRight className="disclosure-chevron" size={16} />
+            </div>
+            <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
+              {section.items?.map((it, ii) => (
+                <div
+                  key={`item-${si}-${ii}-${it.label}`}
+                  className="palette-item"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/tm-node", it.type);
+                    if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
+                    if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                    if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
+                    if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
+                  }}
+                >
+                  <span style={{ marginRight: 6 }}>{it.icon || ""}</span>{it.label}
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
     ),
-    [paletteConfig, paletteError]
+    [paletteConfig, paletteError, openSections, toggleSection, handleSectionKeyDown]
   );
 
   const Toolbar = useMemo(

@@ -6,6 +6,14 @@ html,body,#root{ height:100%; margin:0; }
 .sidebar h3{ margin:4px 0 8px; font-size:14px; color:#374151; }
 .palette-item{ padding:8px 10px; border:1px dashed #9ca3af; border-radius:6px; cursor:grab; background:#f9fafb; }
 .palette-item:active{ cursor:grabbing; }
+.disclosure-section{ margin-top:8px; }
+.disclosure-header{ display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; user-select:none; background:#fff; }
+.disclosure-header:hover{ background:#f9fafb; }
+.disclosure-title{ font-size:12px; color:#374151; font-weight:600; flex:1; }
+.disclosure-chevron{ transition: transform 160ms ease; color:#6b7280; }
+.disclosure-header.open .disclosure-chevron{ transform: rotate(90deg); color:#ef4444; }
+.disclosure-content{ display:none; padding:8px 0 0 0; }
+.disclosure-content.open{ display:block; }
 .canvas{ flex:1; position:relative; display:flex; flex-direction:column; }
 .toolbar{ display:flex; gap:8px; padding:8px; border-bottom:1px solid #e5e7eb; align-items:center; }
 .toolbar button{ padding:6px 10px; border:1px solid #d1d5db; background:#fff; border-radius:6px; cursor:pointer; }
