@@ -595,13 +595,6 @@ export default function AttackPathApp() {
                   {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
                   <div className="pi-text">
                     <div className="pi-label">{it.label}</div>
-                    {it.technology && it.technology !== it.label && (
-                      <div className="pi-meta">{String(it.technology)}</div>
-                    )}
-                  </div>
-                  <div className="pi-tags">
-                    {it.beta ? <span className="pi-tag pi-tag-beta">Beta</span> : null}
-                    {it.legacy ? <span className="pi-tag pi-tag-legacy">Legacy</span> : null}
                   </div>
                 </div>
               ))}
