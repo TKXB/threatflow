@@ -23,6 +23,7 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
+import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer } from "lucide-react";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -48,6 +49,7 @@ export default function ThreatModelingApp() {
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   const [selectedData, setSelectedData] = useState<Record<string, any> | undefined>(undefined);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; type: "node" | "edge"; id: string } | null>(null);
+  const [openSections, setOpenSections] = useState<string[]>([]);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -154,86 +156,112 @@ export default function ThreatModelingApp() {
     event.dataTransfer.dropEffect = "move";
   }, []);
 
+  const toggleSection = useCallback((title: string) => {
+    setOpenSections((prev) => prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]);
+  }, []);
+
+  const handleSectionKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, title: string) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleSection(title);
+    }
+  }, [toggleSection]);
+
+  function getIconForLabel(label: string) {
+    const text = label.toLowerCase();
+    if (/actor/.test(text)) return User;
+    if (/web/.test(text)) return Globe;
+    if (/server/.test(text)) return Server;
+    if (/load\s*balancer|balance|load/.test(text)) return Box;
+    if (/queue|message/.test(text)) return Mail;
+    if (/gateway|api/.test(text)) return Shield;
+    if (/task|worker/.test(text)) return Timer;
+    if (/scheduler|schedule/.test(text)) return Timer;
+    if (/store|db|database/.test(text)) return DbIcon;
+    if (/boundary/.test(text)) return Shield;
+    return Box;
+  }
+
   const SidebarTM = useMemo(
     () => (
       <div className="sidebar">
         <h3>Palette</h3>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => e.dataTransfer.setData("application/tm-node", "actor")}
-        >
-          Actor
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>Process</div>
+        <div className="disclosure-section">
           <div
-            className="palette-item"
-            draggable
-            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "web-application"); }}
+            className={`disclosure-header ${openSections.includes("General") ? "open" : ""}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => toggleSection("General")}
+            onKeyDown={(e) => handleSectionKeyDown(e, "General")}
           >
-            🧩 Web App
+            <span className="disclosure-title">General</span>
+            <ChevronRight className="disclosure-chevron" size={16} />
           </div>
-          <div
-            className="palette-item"
-            draggable
-            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "application-server"); }}
-          >
-            🛰️ App Server
-          </div>
-          <div
-            className="palette-item"
-            draggable
-            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "load-balancer"); }}
-          >
-            ⚖️ Load Balancer
-          </div>
-          <div
-            className="palette-item"
-            draggable
-            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "message-queue"); }}
-          >
-            📬 Message Queue
-          </div>
-          <div
-            className="palette-item"
-            draggable
-            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "gateway"); }}
-          >
-            🛡️ API Gateway
-          </div>
-          <div
-            className="palette-item"
-            draggable
-            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "task"); }}
-          >
-            ⏱️ Task/Worker
-          </div>
-          <div
-            className="palette-item"
-            draggable
-            onDragStart={(e) => { e.dataTransfer.setData("application/tm-node", "process"); e.dataTransfer.setData("application/tm-node-tech", "scheduler"); }}
-          >
-            🗓️ Scheduler
+          <div className={`disclosure-content ${openSections.includes("General") ? "open" : ""}`}>
+            {[
+              { label: "Actor", type: "actor" },
+              { label: "Store", type: "store" },
+              { label: "Trust Boundary", type: "trustBoundary" },
+            ].map((it, i) => (
+              <div
+                key={`gen-${i}-${it.label}`}
+                className="palette-item"
+                data-type={it.type}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/tm-node", it.type);
+                }}
+              >
+                {(() => { const Icon = getIconForLabel(it.label); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                <div className="pi-text">
+                  <div className="pi-label">{it.label}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => e.dataTransfer.setData("application/tm-node", "store")}
-        >
-          Store
-        </div>
-        <div
-          className="palette-item"
-          draggable
-          onDragStart={(e) => e.dataTransfer.setData("application/tm-node", "trustBoundary")}
-        >
-          Trust Boundary
+        <div className="disclosure-section">
+          <div
+            className={`disclosure-header ${openSections.includes("Processes") ? "open" : ""}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => toggleSection("Processes")}
+            onKeyDown={(e) => handleSectionKeyDown(e, "Processes")}
+          >
+            <span className="disclosure-title">Processes</span>
+            <ChevronRight className="disclosure-chevron" size={16} />
+          </div>
+          <div className={`disclosure-content ${openSections.includes("Processes") ? "open" : ""}`}>
+            {[
+              { label: "Web App", tech: "web-application" },
+              { label: "App Server", tech: "application-server" },
+              { label: "Load Balancer", tech: "load-balancer" },
+              { label: "Message Queue", tech: "message-queue" },
+              { label: "API Gateway", tech: "gateway" },
+              { label: "Task/Worker", tech: "task" },
+              { label: "Scheduler", tech: "scheduler" },
+            ].map((it, i) => (
+              <div
+                key={`proc-${i}-${it.label}`}
+                className="palette-item"
+                data-type="process"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/tm-node", "process");
+                  e.dataTransfer.setData("application/tm-node-tech", it.tech);
+                }}
+              >
+                {(() => { const Icon = getIconForLabel(it.label); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                <div className="pi-text">
+                  <div className="pi-label">{it.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     ),
-    []
+    [openSections, toggleSection, handleSectionKeyDown]
   );
 
   const Toolbar = useMemo(
