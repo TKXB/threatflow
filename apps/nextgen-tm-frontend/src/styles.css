@@ -28,7 +28,9 @@ html,body,#root{ height:100%; margin:0; }
 .right-panel{ width:280px; border-left:1px solid #e5e7eb; padding:12px; display:flex; flex-direction:column; gap:12px; background:#fafafa; }
 .right-panel h3{ margin:0 0 6px; font-size:14px; color:#374151; }
 .right-panel .empty{ color:#9ca3af; font-size:12px; }
-.context-menu{ position:absolute; z-index:50; background:#fff; border:1px solid #e5e7eb; border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,0.12); min-width:160px; }
-.context-menu-item{ padding:8px 12px; cursor:pointer; font-size:14px; color:#111827; }
+.context-menu{ position:absolute; z-index:50; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.10); min-width:184px; padding:6px; }
+.context-menu-item{ padding:8px 10px; cursor:pointer; font-size:13px; color:#111827; border-radius:6px; display:flex; align-items:center; gap:8px; }
 .context-menu-item:hover{ background:#f3f4f6; }
+.context-menu-item-danger{ color:#b91c1c; }
+.context-menu-item-danger:hover{ background:#fee2e2; }
 

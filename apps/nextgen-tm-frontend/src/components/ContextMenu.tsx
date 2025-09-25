@@ -12,12 +12,23 @@ export default memo(function ContextMenu({ x, y, items, onClose }: { x: number; 
       className="context-menu"
       style={{ left: x, top: y }}
       onMouseLeave={onClose}
+      role="menu"
+      aria-orientation="vertical"
     >
-      {items.map((it) => (
-        <div key={it.key} className="context-menu-item" onClick={it.onClick}>
-          {it.label}
-        </div>
-      ))}
+      {items.map((it) => {
+        const isDanger = it.key === "delete" || /delete|remove|danger|warning/i.test(it.label);
+        return (
+          <div
+            key={it.key}
+            className={`context-menu-item${isDanger ? " context-menu-item-danger" : ""}`}
+            role="menuitem"
+            tabIndex={-1}
+            onClick={it.onClick}
+          >
+            {it.label}
+          </div>
+        );
+      })}
     </div>
   );
 });
