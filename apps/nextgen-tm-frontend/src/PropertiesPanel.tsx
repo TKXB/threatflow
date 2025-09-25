@@ -8,6 +8,28 @@ type SelectProps = {
 };
 
 function RowSelect({ label, value, options, onChange }: SelectProps) {
+  const toLower = (s: string) => String(s || "").toLowerCase();
+  const isYesNo = Array.isArray(options) && options.length === 2 &&
+    (() => {
+      const set = new Set(options.map((o) => toLower(o.value)));
+      return set.has("yes") && set.has("no");
+    })();
+
+  if (isYesNo) {
+    const isOn = toLower(value) === "yes";
+    return (
+      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span style={{ fontSize: 12, color: "#6b7280" }}>{label}</span>
+        <button
+          type="button"
+          className={`toggle-switch${isOn ? " on" : ""}`}
+          aria-pressed={isOn}
+          onClick={() => onChange(isOn ? "no" : "yes")}
+        />
+      </label>
+    );
+  }
+
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={{ fontSize: 12, color: "#6b7280" }}>{label}</span>
