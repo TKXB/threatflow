@@ -327,6 +327,10 @@ export default function AttackPathApp() {
           })();
           break;
         }
+        case "llm-settings": {
+          setShowLlmSettings(true);
+          break;
+        }
         case "export-otm": {
           const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
           download("model.otm.json", JSON.stringify(otm, null, 2), "application/json");
