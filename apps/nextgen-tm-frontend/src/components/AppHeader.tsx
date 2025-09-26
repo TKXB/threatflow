@@ -5,7 +5,10 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
   return (
     <div className="app-header" data-testid="app-header">
       <div className="header-left" data-testid="header_left_section_wrapper">
-        {/* left placeholder (removed back icon) */}
+        <div className="header-tabs">
+          <button type="button" className={`tab-btn${mode === "tm" ? " active" : ""}`} onClick={() => onSelectMode("tm")}>威胁建模</button>
+          <button type="button" className={`tab-btn${mode === "ap" ? " active" : ""}`} onClick={() => onSelectMode("ap")}>攻击路径</button>
+        </div>
       </div>
       <div className="header-center">
         <div className="menu-bar" data-testid="menu_bar_wrapper">
@@ -16,10 +19,6 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
           <div className="header-chip"><Workflow size={14} /></div>
           <div className="header-title" data-testid="menu_bar_display">
             <span className="header-title-text" data-testid="flow_name">{display}</span>
-          </div>
-          <div className="header-tabs">
-            <button type="button" className={`tab-btn${mode === "tm" ? " active" : ""}`} onClick={() => onSelectMode("tm")}>威胁建模</button>
-            <button type="button" className={`tab-btn${mode === "ap" ? " active" : ""}`} onClick={() => onSelectMode("ap")}>攻击路径</button>
           </div>
         </div>
       </div>
