@@ -41,6 +41,7 @@ function RowSelect({ label, value, options, onChange }: SelectProps) {
           borderRadius: 6,
           padding: "6px 8px",
           background: "#fff",
+          width: "100%",
         }}
       >
         {options.map((opt) => (
@@ -73,6 +74,7 @@ function RowInput({ label, value, placeholder, onChange }: InputProps) {
           borderRadius: 6,
           padding: "6px 8px",
           background: "#fff",
+          width: "100%",
         }}
       />
     </label>
@@ -85,6 +87,7 @@ export type PanelProps = {
   data?: Record<string, any>;
   onNodeChange: (updates: Record<string, any>) => void;
   onEdgeChange: (updates: Record<string, any>) => void;
+  fullWidth?: boolean;
 };
 
 type DynamicFieldDef = { key: string; label: string; type: string; options?: { value: string; label: string }[]; default?: string };
@@ -118,10 +121,11 @@ function DynamicFields({ defs, data, onChange }: { defs: DynamicFieldDef[]; data
   );
 }
 
-export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChange, onEdgeChange }: PanelProps) {
+export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChange, onEdgeChange, fullWidth }: PanelProps) {
+  const panelStyle = fullWidth ? { width: "100%" } : undefined;
   if (!kind) {
     return (
-      <div className="right-panel">
+      <div className="right-panel" style={panelStyle}>
         <h3>Properties</h3>
         <div className="empty">Select a node or an edge</div>
       </div>
@@ -132,7 +136,7 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
     switch (nodeType) {
       case "actor":
         return (
-          <div className="right-panel">
+          <div className="right-panel" style={panelStyle}>
             <h3>Actor</h3>
             <RowInput
               label="Label"
@@ -162,7 +166,7 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
         );
       case "process":
         return (
-          <div className="right-panel">
+          <div className="right-panel" style={panelStyle}>
             <h3>Process</h3>
             <RowInput
               label="Label"
@@ -204,7 +208,7 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
         );
       case "store":
         return (
-          <div className="right-panel">
+          <div className="right-panel" style={panelStyle}>
             <h3>Asset</h3>
             <RowInput
               label="Label"
@@ -240,7 +244,7 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
         );
       case "trustBoundary":
         return (
-          <div className="right-panel">
+          <div className="right-panel" style={panelStyle}>
             <h3>Trust Boundary</h3>
             <RowInput
               label="Label"
@@ -270,7 +274,7 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
         );
       default:
         return (
-          <div className="right-panel">
+          <div className="right-panel" style={panelStyle}>
             <h3>Node</h3>
             <div className="empty">No configurable properties</div>
           </div>
@@ -280,7 +284,7 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
 
   // Edge (Data Flow)
   return (
-    <div className="right-panel">
+    <div className="right-panel" style={panelStyle}>
       <h3>Data Flow</h3>
       <RowInput
         label="Label"

@@ -871,9 +871,10 @@ export default function AttackPathApp() {
   }, []);
 
   return (
-    <div className="app" style={{ height: "100%", display: "flex", overflow: "hidden" }}>
-      {SidebarAP}
-      <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+    <div className="app" style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
+        {SidebarAP}
+        <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {Toolbar}
         <div className="content" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
@@ -940,13 +941,14 @@ export default function AttackPathApp() {
               </div>
             )}
           </div>
-          <div style={{ width: 360, minWidth: 260, borderLeft: "1px solid #e5e7eb", background: "#fff", overflow: "auto" }}>
+          <div style={{ width: 360, minWidth: 260, borderLeft: "1px solid #e5e7eb", background: "#fafafa", overflow: "auto", height: "100%" }}>
             <PropertiesPanel
               kind={selectedKind}
               nodeType={selectedNodeType}
               data={selectedData}
               onNodeChange={onNodeChangeData}
               onEdgeChange={onEdgeChangeData}
+              fullWidth
             />
           </div>
           {showLlmSettings && (
@@ -995,6 +997,7 @@ export default function AttackPathApp() {
         </div>
       </div>
     </div>
+  </div>
   );
 }
 
