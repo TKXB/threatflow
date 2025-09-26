@@ -27,7 +27,7 @@ import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server } from "lucide-react";
+import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X } from "lucide-react";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -118,6 +118,7 @@ export default function AttackPathApp() {
   const [paletteError, setPaletteError] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [showTaraFullscreen, setShowTaraFullscreen] = useState(false);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -983,9 +984,12 @@ export default function AttackPathApp() {
             )}
             {taraRows && taraRows.length > 0 && (
               <div style={{ flex: 1, overflow: "auto", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
-                <div style={{ padding: 8, display: "flex", alignItems: "center" }}>
+                <div style={{ padding: 8, display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>LLM TARA Table</div>
                   <span style={{ flex: 1 }} />
+                  <button onClick={() => setShowTaraFullscreen(true)} title="Open full screen" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#2563eb", background: "transparent", border: 0, cursor: "pointer" }}>
+                    <Maximize2 size={14} />
+                  </button>
                   <button onClick={() => setTaraRows([])} style={{ fontSize: 12 }}>Clear</button>
                 </div>
                 <div style={{ padding: "0 8px 8px 8px" }}>
@@ -995,6 +999,44 @@ export default function AttackPathApp() {
                         <tr key={hg.id}>
                           {hg.headers.map((header) => (
                             <th key={header.id} style={{ textAlign: "left", fontSize: 12, color: "#6b7280", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>
+                              {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                            </th>
+                          ))}
+                        </tr>
+                      ))}
+                    </thead>
+                    <tbody>
+                      {taraTable.getRowModel().rows.map((row) => (
+                        <tr key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <td key={cell.id} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top", fontSize: 12 }}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            {showTaraFullscreen && (
+              <div style={{ position: "fixed", inset: 0, background: "#ffffff", zIndex: 50, display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", alignItems: "center", padding: 12, borderBottom: "1px solid #e5e7eb" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>LLM TARA Table (Full Screen)</div>
+                  <span style={{ flex: 1 }} />
+                  <button onClick={() => setShowTaraFullscreen(false)} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                    <X size={16} />
+                    Close
+                  </button>
+                </div>
+                <div style={{ flex: 1, overflow: "auto", padding: 12 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      {taraTable.getHeaderGroups().map((hg) => (
+                        <tr key={hg.id}>
+                          {hg.headers.map((header) => (
+                            <th key={header.id} style={{ textAlign: "left", fontSize: 12, color: "#6b7280", padding: "6px 8px", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, background: "#fff" }}>
                               {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                             </th>
                           ))}
