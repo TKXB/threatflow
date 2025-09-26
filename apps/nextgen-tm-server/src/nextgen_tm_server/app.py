@@ -16,6 +16,8 @@ from .llm.templates import (
     build_attack_methods_schema,
     default_methods_user_prompt,
     build_chat_completion_payload,
+    build_tara_schema,
+    default_tara_user_prompt,
 )
 
 
@@ -374,6 +376,68 @@ def analysis_methods_llm(req: LlmMethodsRequest) -> dict[str, Any]:
         logger.exception("LLM methods: failed | elapsed_ms=%d", int(elapsed * 1000))
         return {"ok": False, "error": str(ex), "methods": []}
 
+
+# 新增：LLM 生成 TARA 表格
+@app.post("/analysis/llm/tara")
+def analysis_tara_llm(req: LlmMethodsRequest) -> dict[str, Any]:
+    t0 = time.perf_counter()
+    base = analysis_paths(AnalyzeRequest(nodes=req.nodes, edges=req.edges, k=req.k, maxDepth=req.maxDepth))
+    paths = base["paths"]
+
+    llm_base = (req.llm and req.llm.baseUrl) or _get_env("LLM_BASE_URL", "http://127.0.0.1:4000/v1")
+    llm_key = (req.llm and req.llm.apiKey) or _get_env("LLM_API_KEY", "")
+    model = (req.llm and req.llm.model) or _get_env("LLM_MODEL", "gpt-4o-mini")
+
+    schema: dict[str, Any] = build_tara_schema()
+    user_prompt = req.prompt or default_tara_user_prompt()
+
+    payload: dict[str, Any] = build_chat_completion_payload(
+        model=model,
+        nodes=req.nodes,
+        edges=req.edges,
+        paths=paths,
+        user_prompt=user_prompt,
+        schema=schema,
+        temperature=0.2,
+    )
+
+    headers = {"content-type": "application/json"}
+    if llm_key:
+        headers["authorization"] = f"Bearer {llm_key}"
+
+    try:
+        logger.info(
+            "LLM TARA: start request | model=%s base=%s nodes=%d edges=%d paths=%d",
+            model,
+            llm_base,
+            len(req.nodes),
+            len(req.edges),
+            len(paths),
+        )
+        r = httpx.post(f"{llm_base}/chat/completions", headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        elapsed = time.perf_counter() - t0
+        data = r.json()
+        content = (data.get("choices") or [{}])[0].get("message", {}).get("content", "{}")
+        parsed = _extract_json(content)
+        rows = parsed.get("rows") or []
+        result = {"ok": True, "rows": rows[: int(req.k)]}
+        logger.info(
+            "LLM TARA: success | model=%s elapsed_ms=%d rows=%d resp_bytes=%d",
+            model,
+            int(elapsed * 1000),
+            len(result["rows"]),
+            len(r.content or b""),
+        )
+        return result
+    except httpx.HTTPError as ex:
+        elapsed = time.perf_counter() - t0
+        logger.exception("LLM TARA: http error | elapsed_ms=%d", int(elapsed * 1000))
+        return {"ok": False, "error": str(ex), "rows": []}
+    except Exception as ex:
+        elapsed = time.perf_counter() - t0
+        logger.exception("LLM TARA: failed | elapsed_ms=%d", int(elapsed * 1000))
+        return {"ok": False, "error": str(ex), "rows": []}
 
 # ===== Plugins aggregation (Entry Points / Assets as standalone JSON files) =====
 

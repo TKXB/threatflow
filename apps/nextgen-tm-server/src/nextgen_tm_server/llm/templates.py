@@ -57,6 +57,129 @@ def default_methods_user_prompt() -> str:
     )
 
 
+def build_tara_schema() -> dict[str, Any]:
+    """返回用于 TARA 表格（按截图字段）的 JSON Schema。
+
+    字段对照：
+    - damageScenarioNo: Damage Scenario No.
+    - damageScenario: Damage Scenario
+    - cybersecurityProperty: {C, I, A} 三属性是否受影响（布尔）
+    - threatScenarioNo: Threat scenario No.
+    - threatScenario: Threat scenario
+    - impactCategory: Impact category（如 P: Privacy）
+    - impactRating: Impact Rating（文本，如 Severe）
+    - impact: Impact（文本）
+    - attackPathNo: Attack path No.
+    - entryPoint: Entry Point
+    - logic: 逻辑（AND/OR）
+    - attackPath: Attack path
+    - unR155CsmsAnnex5PartA: UN-R155 CSMS Annex 5 PartA（条款与说明）
+    - attackVectorBasedApproach: Attack vector-based approach
+    - attackFeasibilityRating: Attack feasibility rating (refer to 15.7)
+    - riskImpact: Risk Impact (refer to 15.5)
+    - riskValue: Risk value（数值）
+    - attackVectorParameters: Attack vector parameters (refer to 15.7)
+    - riskImpactFinal: Risk Impact (refer to 15.5) 末列（如有重复展示）
+    """
+    return {
+        "name": "TARATable",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "damageScenarioNo": {"type": "string"},
+                            "damageScenario": {"type": "string"},
+                            "cybersecurityProperty": {
+                                "type": "object",
+                                "properties": {
+                                    "C": {"type": "boolean"},
+                                    "I": {"type": "boolean"},
+                                    "A": {"type": "boolean"},
+                                },
+                                "required": ["C", "I", "A"],
+                                "additionalProperties": False,
+                            },
+                            "threatScenarioNo": {"type": "string"},
+                            "threatScenario": {"type": "string"},
+                            "impactCategory": {
+                                "type": "string",
+                                "enum": [
+                                    "Safety",
+                                    "Financial",
+                                    "Operational",
+                                    "Privacy",
+                                ],
+                            },
+                            "impactRating": {
+                                "type": "string",
+                                "enum": [
+                                    "Severe",
+                                    "Major",
+                                    "Moderate",
+                                    "Negligible",
+                                ],
+                            },
+                            "impact": {"type": "string"},
+                            "attackPathNo": {"type": "string"},
+                            "entryPoint": {"type": "string"},
+                            "logic": {"type": "string", "enum": ["AND", "OR"]},
+                            "attackPath": {"type": "string"},
+                            "unR155CsmsAnnex5PartA": {"type": "string"},
+                            "attackVectorBasedApproach": {"type": "string"},
+                            "attackFeasibilityRating": {
+                                "type": "string",
+                                "enum": ["Low", "Medium", "High"],
+                            },
+                            "riskImpact": {"type": "string"},
+                            "riskValue": {"type": "number"},
+                            "attackVectorParameters": {"type": "string"},
+                            "riskImpactFinal": {"type": "string"},
+                        },
+                        "required": [
+                            "damageScenarioNo",
+                            "damageScenario",
+                            "cybersecurityProperty",
+                            "threatScenarioNo",
+                            "threatScenario",
+                            "impactCategory",
+                            "impactRating",
+                            "impact",
+                            "attackPathNo",
+                            "entryPoint",
+                            "logic",
+                            "attackPath",
+                            "attackFeasibilityRating",
+                            "riskImpact",
+                            "riskValue",
+                        ],
+                        "additionalProperties": True,
+                    },
+                }
+            },
+            "required": ["rows"],
+            "additionalProperties": False,
+        },
+    }
+
+
+def default_tara_user_prompt() -> str:
+    """返回用于生成 TARA 表格行的默认用户提示词。"""
+    return (
+        "基于给定的系统威胁建模上下文，生成 TARA 表格 rows（JSON）。"
+        "每一行需严格包含字段：damageScenarioNo、damageScenario、cybersecurityProperty{C,I,A}、"
+        "threatScenarioNo、threatScenario、impactCategory、impactRating、impact、attackPathNo、"
+        "entryPoint、logic、attackPath、unR155CsmsAnnex5PartA、attackVectorBasedApproach、"
+        "attackFeasibilityRating、riskImpact、riskValue、attackVectorParameters、riskImpactFinal。"
+        "其中 C/I/A 为布尔值；impactCategory 取 Safety/Financial/Operational/Privacy；"
+        "impactRating 取 Severe/Major/Moderate/Negligible；"
+        "logic 仅能为 AND/OR；feasibility 取 Low/Medium/High。"
+        "只输出 JSON，不要多余解释。"
+    )
+
 def _dump_models_or_dicts(items: Iterable[Any]) -> list[dict[str, Any]]:
     """将 Pydantic BaseModel 列表或字典列表统一转为字典列表。"""
     result: list[dict[str, Any]] = []
