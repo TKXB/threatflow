@@ -7,7 +7,16 @@ export default function App() {
   const [mode, setMode] = useState<"tm" | "ap">("tm");
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <AppHeader project="Starter Project" title={mode === "tm" ? "Threat Modeling" : "Attack Path"} mode={mode} onSelectMode={setMode} />
+      <AppHeader
+        project="Starter Project"
+        title={mode === "tm" ? "Threat Modeling" : "Attack Path"}
+        mode={mode}
+        onSelectMode={setMode}
+        onMenuAction={(key) => {
+          const ev = new CustomEvent("ap-menu", { detail: { key } });
+          window.dispatchEvent(ev);
+        }}
+      />
       <div style={{ flex: 1, minHeight: 0 }}>
         {mode === "tm" ? <ThreatModelingApp /> : <AttackPathApp />}
       </div>

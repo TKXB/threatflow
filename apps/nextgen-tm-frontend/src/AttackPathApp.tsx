@@ -278,6 +278,84 @@ export default function AttackPathApp() {
 
   useEffect(() => { void loadPalette(); }, []);
 
+  // Header dropdown menu handlers
+  useEffect(() => {
+    const handler = (e: any) => {
+      const key = e?.detail?.key as string;
+      if (!key) return;
+      switch (key) {
+        case "clear":
+          setNodes([]); setEdges([]); break;
+        case "analyze":
+          void runMockAnalysisAndHighlight(); break;
+        case "topk": {
+          (async () => {
+            try {
+              const res = await fetch(`${API}/analysis/paths`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
+              const json = await res.json();
+              const paths: ScoredPath[] = json?.paths || [];
+              setLastScores(paths);
+              if (!Array.isArray(paths) || paths.length === 0) { alert("No paths found from entry to target."); return; }
+              const text = paths.map((p, i) => `${i + 1}. [score=${p.score}] ${(p as any).labels?.join(" -> ") || (p as any).nodeIds?.join(" -> ")}`).join("\n");
+              alert(`Top paths (scored):\n${text}`);
+            } catch (e) { console.error(e); alert("Failed to fetch analysis paths"); }
+          })();
+          break;
+        }
+        case "methods": {
+          (async () => {
+            try {
+              const res = await fetch(`${API}/analysis/methods`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
+              const json = await res.json();
+              const methods: AttackMethod[] = json?.methods || [];
+              if (!Array.isArray(methods) || methods.length === 0) { alert("No attack methods suggested for current Entry→Target paths."); return; }
+              const text = methods.map((m, i) => `${i + 1}. [${m.severity}] ${m.title} — ${m.description}`).join("\n\n");
+              alert(`Suggested Attack Methods (demo):\n\n${text}`);
+            } catch (e) { console.error(e); alert("Failed to fetch attack methods"); }
+          })();
+          break;
+        }
+        case "llm": {
+          (async () => {
+            try {
+              const res = await fetch(`${API}/analysis/llm/methods`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }) });
+              const json = await res.json();
+              const methods: LlmAttackMethod[] = (json?.methods || []) as LlmAttackMethod[];
+              if (!Array.isArray(methods) || methods.length === 0) { alert("No LLM-suggested methods."); setLlmMethods([]); return; }
+              setLlmMethods(methods);
+            } catch (e) { console.error(e); alert("Failed to fetch LLM-based methods"); setLlmMethods([]); }
+          })();
+          break;
+        }
+        case "export-otm": {
+          const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
+          download("model.otm.json", JSON.stringify(otm, null, 2), "application/json");
+          break;
+        }
+        case "export-threagile": {
+          const yaml = buildThreagileYaml(nodes as any, edges as any, "Model");
+          download("model.threagile.yaml", yaml, "text/yaml");
+          break;
+        }
+        case "export-report": {
+          (async () => {
+            const paths = lastScores ?? (async () => {
+              const res = await fetch(`${API}/analysis/paths`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
+              const json = await res.json();
+              return (json?.paths || []) as ScoredPath[];
+            })();
+            const resolved = Array.isArray(paths) ? paths : await paths;
+            const report = { generatedAt: new Date().toISOString(), summary: { numPaths: resolved.length, topScore: resolved[0]?.score ?? 0 }, paths: resolved };
+            download("analysis-report.json", JSON.stringify(report, null, 2), "application/json");
+          })();
+          break;
+        }
+      }
+    };
+    window.addEventListener("ap-menu", handler as any);
+    return () => window.removeEventListener("ap-menu", handler as any);
+  }, [nodes, edges, API, lastScores, llmBaseUrl, llmApiKey, llmModel]);
+
   const toggleSection = useCallback((title: string) => {
     setOpenSections((prev) => prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]);
   }, []);
@@ -606,111 +684,7 @@ export default function AttackPathApp() {
     [paletteConfig, paletteError, openSections, toggleSection, handleSectionKeyDown]
   );
 
-  const Toolbar = useMemo(
-    () => (
-      <div className="toolbar">
-        <button onClick={() => { setNodes([]); setEdges([]); }}>Clear All</button>
-        <button disabled={analyzing} onClick={() => runMockAnalysisAndHighlight()}>{analyzing ? "Analyzing..." : "Analyze & Highlight"}</button>
-        <button onClick={async () => {
-          try {
-            const res = await fetch(`${API}/analysis/paths`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }),
-            });
-            const json = await res.json();
-            const paths: ScoredPath[] = json?.paths || [];
-            setLastScores(paths);
-            if (!Array.isArray(paths) || paths.length === 0) { alert("No paths found from entry to target."); return; }
-            const text = paths
-              .map((p, i) => `${i + 1}. [score=${p.score}] ${(p as any).labels?.join(" -> ") || (p as any).nodeIds?.join(" -> ")}`)
-              .join("\n");
-            alert(`Top paths (scored):\n${text}`);
-          } catch (e) {
-            console.error(e);
-            alert("Failed to fetch analysis paths");
-          }
-        }}>Show Top-K (Scores)</button>
-        <button onClick={clearHighlights}>Clear Highlights</button>
-        <span style={{ flex: 1 }} />
-        <button onClick={() => {
-          const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
-          download("model.otm.json", JSON.stringify(otm, null, 2), "application/json");
-        }}>Export OTM</button>
-        <button onClick={() => {
-          const yaml = buildThreagileYaml(nodes as any, edges as any, "Model");
-          download("model.threagile.yaml", yaml, "text/yaml");
-        }}>Export Threagile</button>
-        <button onClick={async () => {
-          const paths = lastScores ?? (async () => {
-            const res = await fetch(`${API}/analysis/paths`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }),
-            });
-            const json = await res.json();
-            return (json?.paths || []) as ScoredPath[];
-          })();
-          const resolved = Array.isArray(paths) ? paths : await paths;
-          const report = { generatedAt: new Date().toISOString(), summary: { numPaths: resolved.length, topScore: resolved[0]?.score ?? 0 }, paths: resolved };
-          download("analysis-report.json", JSON.stringify(report, null, 2), "application/json");
-        }}>Export Report</button>
-        <button onClick={async () => {
-          try {
-            const res = await fetch(`${API}/analysis/methods`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }),
-            });
-            const json = await res.json();
-            const methods: AttackMethod[] = json?.methods || [];
-            if (!Array.isArray(methods) || methods.length === 0) { alert("No attack methods suggested for current Entry→Target paths."); return; }
-            const text = methods.map((m, i) => `${i + 1}. [${m.severity}] ${m.title} — ${m.description}`).join("\n\n");
-            alert(`Suggested Attack Methods (demo):\n\n${text}`);
-          } catch (e) {
-            console.error(e);
-            alert("Failed to fetch attack methods");
-          }
-        }}>Analyze Methods</button>
-        <button onClick={async () => {
-          try {
-            const res = await fetch(`${API}/analysis/llm/methods`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }),
-            });
-            const json = await res.json();
-            const methods: LlmAttackMethod[] = (json?.methods || []) as LlmAttackMethod[];
-            if (!Array.isArray(methods) || methods.length === 0) { alert("No LLM-suggested methods."); setLlmMethods([]); return; }
-            setLlmMethods(methods);
-          } catch (e) {
-            console.error(e);
-            alert("Failed to fetch LLM-based methods");
-            setLlmMethods([]);
-          }
-        }}>LLM Methods</button>
-        <button onClick={() => setShowLlmSettings(true)}>LLM Settings</button>
-        <button onClick={() => {
-          // Demo graph: UART (Entry) -> Linux -> SPI Device (Target)
-          const nid = (s: string) => s;
-          const demoNodes: Node<any>[] = [
-            { id: nid("n_1"), type: "entryPoint", position: { x: 80, y: 160 }, data: { label: "UART", technology: "uart", isEntry: "yes" }, width: 80, height: 80, zIndex: 1 },
-            { id: nid("n_2"), type: "process", position: { x: 260, y: 150 }, data: { label: "Linux", technology: "linux", impact: "4" }, width: 120, height: 60, zIndex: 1 },
-            { id: nid("n_3"), type: "store", position: { x: 480, y: 140 }, data: { label: "SPI Device", technology: "spi", isTarget: "yes", impact: "4" }, width: 120, height: 70, zIndex: 1 },
-          ];
-          const demoEdges: Edge[] = [
-            { id: "e1", source: "n_1", target: "n_2", data: { protocol: "text", likelihood: "4" } } as any,
-            { id: "e2", source: "n_2", target: "n_3", data: { protocol: "local-file-access", likelihood: "3" } } as any,
-          ];
-          setNodes(demoNodes as any);
-          setEdges(demoEdges as any);
-          setIdSeq(4);
-          clearHighlights();
-        }}>Load Demo</button>
-      </div>
-    ),
-    [nodes, edges, analyzing, lastScores, llmBaseUrl, llmApiKey, llmModel]
-  );
+  // Toolbar removed – actions moved to header dropdown
 
   const onSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
     if (params.nodes.length === 1) {
@@ -875,7 +849,6 @@ export default function AttackPathApp() {
       <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
         {SidebarAP}
         <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-        {Toolbar}
         <div className="content" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             <div className="flow" style={{ height: llmMethods && llmMethods.length > 0 ? "50%" : "100%" }}>

@@ -1,6 +1,6 @@
-import { Workflow, Bell, ChevronsUpDown } from "lucide-react";
+import { Workflow, Bell, ChevronsUpDown, ChevronDown } from "lucide-react";
 
-export default function AppHeader({ project = "Starter Project", title = "Attack Path", count, mode, onSelectMode }: { project?: string; title?: string; count?: number; mode: "tm" | "ap"; onSelectMode: (m: "tm" | "ap") => void }) {
+export default function AppHeader({ project = "Starter Project", title = "Attack Path", count, mode, onSelectMode, onMenuAction }: { project?: string; title?: string; count?: number; mode: "tm" | "ap"; onSelectMode: (m: "tm" | "ap") => void; onMenuAction?: (key: string) => void }) {
   const display = typeof count === "number" ? `${title} (${count})` : title;
   return (
     <div className="app-header" data-testid="app-header">
@@ -23,6 +23,25 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
         </div>
       </div>
       <div className="header-right" data-testid="header_right_section_wrapper">
+        <div className="dropdown" data-testid="ap-menu">
+          <button className="dropdown-trigger">
+            Options
+            <ChevronDown size={18} />
+          </button>
+          <div className="dropdown-content">
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("clear")}>Clear All</div>
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("analyze")}>Analyze & Highlight</div>
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("topk")}>Show Top-K (Scores)</div>
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("methods")}>Analyze Methods</div>
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm")}>LLM Methods</div>
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm-settings")}>LLM Settings</div>
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("load-demo")}>Load Demo</div>
+            <div className="dropdown-sep" />
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-otm")}>Export OTM</div>
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-threagile")}>Export Threagile</div>
+            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-report")}>Export Report</div>
+          </div>
+        </div>
         <button className="hit-area-hover" aria-label="Notifications" data-testid="notification_button">
           <span className="notif-dot" />
           <Bell size={16} />

@@ -24,6 +24,13 @@ html,body,#root{ height:100%; margin:0; }
 .v-sep{ width:1px; height:28px; background:#e5e7eb; }
 .user-menu{ display:inline-flex; align-items:center; gap:6px; padding:2px 4px; border-radius:6px; background:transparent; border:0; cursor:pointer; }
 .avatar{ width:24px; height:24px; border-radius:6px; background:linear-gradient(135deg,#4f46e5,#06b6d4); }
+.dropdown{ position:relative; }
+.dropdown-trigger{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; border:1px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; }
+.dropdown-content{ position:absolute; right:0; top:100%; margin-top:8px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; min-width:220px; box-shadow:0 10px 25px rgba(0,0,0,0.10); padding:6px; display:none; z-index:60; }
+.dropdown:hover .dropdown-content{ display:block; }
+.dropdown-item{ padding:8px 10px; border-radius:6px; font-size:13px; color:#111827; cursor:pointer; }
+.dropdown-item:hover{ background:#f3f4f6; }
+.dropdown-sep{ height:1px; background:#e5e7eb; margin:4px 0; }
 .sidebar{ width:var(--sidebar-width); border-right:1px solid #e5e7eb; padding:12px; display:flex; flex-direction:column; gap:8px; height:100%; min-height:0; overflow:auto; }
 .sidebar h3{ margin:4px 0 8px; font-size:14px; color:#374151; }
 .palette-item{ display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; cursor:grab; background:#fff; transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
