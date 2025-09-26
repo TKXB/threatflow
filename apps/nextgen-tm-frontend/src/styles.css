@@ -1,6 +1,8 @@
 :root{ --sidebar-width: 240px; }
 *{ box-sizing:border-box; }
 html,body,#root{ height:100%; margin:0; }
+.app, .sidebar, .toolbar, .content, .right-panel { font-family: var(--font-sans, Inter, sans-serif); }
+.code, pre, code, kbd, samp { font-family: var(--font-mono, "JetBrains Mono", monospace); }
 .app{ display:flex; height:100%; width:100%; }
 .app-header{ position:relative; z-index:10; display:flex; height:48px; width:100%; align-items:center; justify-content:space-between; border-bottom:1px solid #e5e7eb; padding:0 24px; background:#fff; }
 .header-left{ z-index:30; display:flex; align-items:center; gap:8px; }
