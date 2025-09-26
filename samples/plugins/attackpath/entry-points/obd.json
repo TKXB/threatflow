@@ -1,0 +1,9 @@
+{
+  "id": "entry.obd",
+  "label": "OBD",
+  "icon": "🔧",
+  "type": "entryPoint",
+  "technology": "obd",
+  "priority": 50
+}
+

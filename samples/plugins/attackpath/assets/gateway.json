@@ -1,0 +1,9 @@
+{
+  "id": "asset.auto.gateway",
+  "label": "Gateway",
+  "icon": "🛡️",
+  "type": "store",
+  "technology": "gateway",
+  "priority": 60
+}
+

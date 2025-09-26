@@ -1,0 +1,9 @@
+{
+  "id": "asset.auto.ivi",
+  "label": "IVI",
+  "icon": "🎛️",
+  "type": "store",
+  "technology": "ivi",
+  "priority": 75
+}
+
