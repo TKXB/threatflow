@@ -482,7 +482,7 @@ def _collect_plugins_from_dir(root: str) -> dict[str, list[dict[str, Any]]]:
 def _default_plugins_root() -> str:
     # Resolve repo-root-relative samples/plugins/attackpath as a sensible default
     here = os.path.dirname(__file__)
-    repo_root = os.path.abspath(os.path.join(here, "../../../../.."))
+    repo_root = os.path.abspath(os.path.join(here, "../../../.."))
     return os.path.join(repo_root, "samples", "plugins", "attackpath")
 
 
