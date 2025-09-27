@@ -1119,7 +1119,7 @@ export default function AttackPathApp() {
                 </div>
               </div>
             )}
-            {taraLoading && (
+            {taraLoading && (!taraRows || taraRows.length === 0) && (
               <div style={{ flex: 1, overflow: "auto", borderTop: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 12 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" role="status" aria-label="Loading">
@@ -1135,6 +1135,7 @@ export default function AttackPathApp() {
             {taraRows && taraRows.length > 0 && (
               <TaraTable
                 rows={taraRows}
+                loading={taraLoading}
                 onOpenFullscreen={() => setShowTaraFullscreen(true)}
                 onClose={() => setTaraRows([])}
                 onReanalyzeRow={(rowIndex) => {

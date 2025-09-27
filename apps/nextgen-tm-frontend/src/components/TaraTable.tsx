@@ -10,9 +10,10 @@ type Props = {
   onOpenFullscreen: () => void;
   onReanalyzeRow?: (rowIndex: number) => void;
   onClose?: () => void;
+  loading?: boolean;
 };
 
-export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onClose }: Props) {
+export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onClose, loading }: Props) {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const closeCtx = useCallback(() => setCtxMenu(null), []);
@@ -157,6 +158,19 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
           </tbody>
         </table>
       </div>
+      {loading && (
+        <div aria-live="polite" role="status" style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 12 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" aria-label="Loading">
+              <circle cx="12" cy="12" r="10" stroke="#e5e7eb" strokeWidth="4" fill="none" />
+              <path d="M12 2 a10 10 0 0 1 10 10" stroke="#2563eb" strokeWidth="4" fill="none">
+                <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
+              </path>
+            </svg>
+            <div style={{ fontSize: 13, color: "#374151" }}>Generating TARA...</div>
+          </div>
+        </div>
+      )}
       {ctxMenu && (
         <ContextMenu
           x={ctxMenu.x}
