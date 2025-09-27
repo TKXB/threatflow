@@ -610,7 +610,7 @@ export default function AttackPathApp() {
     { id: "attackVectorParameters", header: () => "Attack vector parameters", accessorKey: "attackVectorParameters", size: 200 },
     { id: "riskImpactFinal", header: () => "Risk Impact (final)", accessorKey: "riskImpactFinal", size: 140 },
   ], []);
-  const taraTable = useReactTable({ data: taraRows ?? [], columns: taraColumns, getCoreRowModel: getCoreRowModel() });
+  const taraTable = useReactTable({ data: taraRows ?? [], columns: taraColumns, getCoreRowModel: getCoreRowModel(), getRowId: (_row, index) => String(index) });
 
   // RowSpan merge configuration and helpers for TARA table
   // Grouping key: from Damage Scenario No. to Entry Point (inclusive)
@@ -638,7 +638,10 @@ export default function AttackPathApp() {
     return (row as any)?.[id] ?? "";
   }
 
-  const taraRowModels = taraTable.getRowModel().rows;
+  const taraRowModels = useMemo(() => {
+    const rows = Array.isArray(taraRows) ? taraRows : [];
+    return rows.map((r, idx) => ({ original: r as TaraRow, id: String(idx) }));
+  }, [taraRows]);
   const taraRowIndexById = useMemo(() => {
     const map = new Map<string, number>();
     taraRowModels.forEach((r, idx) => map.set(r.id, idx));
@@ -646,6 +649,7 @@ export default function AttackPathApp() {
   }, [taraRowModels]);
 
   const taraRowSpanMeta = useMemo(() => {
+    if (!taraRowModels.length) return [] as Array<Record<string, { rowSpan: number; hidden: boolean }>>;
     type CellMeta = { rowSpan: number; hidden: boolean };
     const meta: Array<Record<string, CellMeta>> = taraRowModels.map(() => ({}));
     let currentKey: string | null = null;
