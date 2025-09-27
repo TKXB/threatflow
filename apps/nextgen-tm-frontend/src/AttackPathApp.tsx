@@ -28,6 +28,8 @@ import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X } from "lucide-react";
+import TaraTable from "./components/TaraTable";
+import type { TaraRow } from "./types/tara";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -58,28 +60,7 @@ type LlmAttackMethod = {
   matchedPath?: { nodeIds: string[]; labels?: string[] };
 };
 
-// TARA row structure returned by LLM (full field names)
-type TaraRow = {
-  damageScenarioNo?: string;
-  damageScenario?: string;
-  cybersecurityProperty?: { C: boolean; I: boolean; A: boolean };
-  threatScenarioNo?: string;
-  threatScenario?: string;
-  impactCategory?: "Safety" | "Financial" | "Operational" | "Privacy";
-  impactRating?: "Severe" | "Major" | "Moderate" | "Negligible";
-  impact?: string;
-  attackPathNo?: string;
-  entryPoint?: string;
-  logic?: "AND" | "OR";
-  attackPath?: string;
-  unR155CsmsAnnex5PartA?: string;
-  attackVectorBasedApproach?: string;
-  attackFeasibilityRating?: "Low" | "Medium" | "High";
-  riskImpact?: string;
-  riskValue?: number;
-  attackVectorParameters?: string;
-  riskImpactFinal?: string;
-};
+// TARA row type moved to ./types/tara
 
 const initialNodes: Node<BasicNodeData>[] = [];
 const initialEdges: Edge[] = [];
@@ -1136,49 +1117,7 @@ export default function AttackPathApp() {
               </div>
             )}
             {taraRows && taraRows.length > 0 && (
-              <div style={{ flex: 1, overflow: "auto", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
-                <div style={{ padding: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>LLM TARA Table</div>
-                  <span style={{ flex: 1 }} />
-                  <button onClick={() => setShowTaraFullscreen(true)} title="Open full screen" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#2563eb", background: "transparent", border: 0, cursor: "pointer" }}>
-                    <Maximize2 size={14} />
-                  </button>
-                  <button onClick={() => setTaraRows([])} style={{ fontSize: 12 }}>Clear</button>
-                </div>
-                <div style={{ padding: "0 8px 8px 8px" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      {taraTable.getHeaderGroups().map((hg) => (
-                        <tr key={hg.id}>
-                          {hg.headers.map((header) => (
-                            <th key={header.id} style={{ textAlign: "left", fontSize: 12, color: "#6b7280", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>
-                              {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                            </th>
-                          ))}
-                        </tr>
-                      ))}
-                    </thead>
-                    <tbody>
-                      {taraTable.getRowModel().rows.map((row) => (
-                        <tr key={row.id}>
-                          {row.getVisibleCells().map((cell) => {
-                            const idx = taraRowIndexById.get(row.id) ?? 0;
-                            const colId = cell.column.id;
-                            const meta = (taraRowSpanMeta[idx] || {})[colId];
-                            if (meta && meta.hidden) return null;
-                            const rs = meta ? meta.rowSpan : undefined;
-                            return (
-                              <td key={cell.id} rowSpan={rs} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top", fontSize: 12 }}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <TaraTable rows={taraRows} onOpenFullscreen={() => setShowTaraFullscreen(true)} />
             )}
             {showTaraFullscreen && (
               <div style={{ position: "fixed", inset: 0, background: "#ffffff", zIndex: 50, display: "flex", flexDirection: "column" }}>
