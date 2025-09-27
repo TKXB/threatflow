@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 import json
+import re
 
 
 def build_attack_methods_schema() -> dict[str, Any]:
@@ -43,6 +44,15 @@ def build_attack_methods_schema() -> dict[str, Any]:
             "additionalProperties": False,
         },
     }
+
+
+def build_id_string_schema(prefix: str, digits: int = 3) -> dict[str, Any]:
+    """构造限定为 <PREFIX><零填充数字> 形式的字符串 JSON Schema。
+
+    例如：prefix="DS" 且 digits=3 时，匹配 "DS001"。
+    """
+    pattern = f"^{re.escape(prefix)}\\d{{{digits}}}$"
+    return {"type": "string", "pattern": pattern}
 
 
 def default_methods_user_prompt() -> str:
@@ -91,7 +101,7 @@ def build_tara_schema() -> dict[str, Any]:
                     "items": {
                         "type": "object",
                         "properties": {
-                            "damageScenarioNo": {"type": "string"},
+                            "damageScenarioNo": build_id_string_schema("DS", 3),
                             "damageScenario": {"type": "string"},
                             "cybersecurityProperty": {
                                 "type": "object",
@@ -103,7 +113,7 @@ def build_tara_schema() -> dict[str, Any]:
                                 "required": ["C", "I", "A"],
                                 "additionalProperties": False,
                             },
-                            "threatScenarioNo": {"type": "string"},
+                            "threatScenarioNo": build_id_string_schema("TS", 3),
                             "threatScenario": {"type": "string"},
                             "impactCategory": {
                                 "type": "string",
@@ -124,7 +134,7 @@ def build_tara_schema() -> dict[str, Any]:
                                 ],
                             },
                             "impact": {"type": "string"},
-                            "attackPathNo": {"type": "string"},
+                            "attackPathNo": build_id_string_schema("AP", 3),
                             "entryPoint": {"type": "string"},
                             "logic": {"type": "string", "enum": ["AND", "OR"]},
                             "attackPath": {"type": "string"},
@@ -174,6 +184,8 @@ def default_tara_user_prompt() -> str:
         "threatScenarioNo、threatScenario、impactCategory、impactRating、impact、attackPathNo、"
         "entryPoint、logic、attackPath、unR155CsmsAnnex5PartA、attackVectorBasedApproach、"
         "attackFeasibilityRating、riskImpact、riskValue、attackVectorParameters、riskImpactFinal。"
+        "编号格式约束：damageScenarioNo 必须为 DS 后接 3 位数字；threatScenarioNo 必须为 TS 后接 3 位数字；"
+        "attackPathNo 必须为 AP 后接 3 位数字（例如 DS001、TS001、AP001）。"
         "其中 C/I/A 为布尔值；impactCategory 取 Safety/Financial/Operational/Privacy；"
         "impactRating 取 Severe/Major/Moderate/Negligible；"
         "logic 仅能为 AND/OR；feasibility 取 Low/Medium/High。"
