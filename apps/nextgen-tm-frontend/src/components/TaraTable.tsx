@@ -3,14 +3,16 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import type { TaraRow } from "../types/tara";
 import { useState, useCallback, useRef } from "react";
 import ContextMenu from "./ContextMenu";
+import { Maximize2, X } from "lucide-react";
 
 type Props = {
   rows: TaraRow[] | null;
   onOpenFullscreen: () => void;
   onReanalyzeRow?: (rowIndex: number) => void;
+  onClose?: () => void;
 };
 
-export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow }: Props) {
+export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onClose }: Props) {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const closeCtx = useCallback(() => setCtxMenu(null), []);
@@ -101,9 +103,11 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow }: Pr
       <div style={{ padding: 8, display: "flex", alignItems: "center", gap: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>LLM TARA Table</div>
         <span style={{ flex: 1 }} />
-        <button onClick={onOpenFullscreen} title="Open full screen" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#2563eb", background: "transparent", border: 0, cursor: "pointer" }}>
-          {/* Icon is passed by parent or not required here to avoid extra deps */}
-          ⤢
+        <button onClick={onOpenFullscreen} title="Open full screen" aria-label="Open full screen" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#2563eb", background: "transparent", border: 0, cursor: "pointer" }}>
+          <Maximize2 size={13} />
+        </button>
+        <button onClick={() => onClose && onClose()} title="Close" aria-label="Close" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6b7280", background: "transparent", border: 0, cursor: "pointer" }}>
+          <X size={18} />
         </button>
       </div>
       <div style={{ padding: "0 8px 8px 8px" }}>
