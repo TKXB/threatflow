@@ -136,6 +136,12 @@ export default function AttackPathApp() {
   const [openSections, setOpenSections] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showTaraFullscreen, setShowTaraFullscreen] = useState(false);
+  // Left palette resizable width (mapped to CSS var --sidebar-width)
+  const [leftWidth, setLeftWidth] = useState<number>(240);
+  const leftDragRef = useRef<{ startX: number; startW: number } | null>(null);
+  // Right properties panel resizable width
+  const [rightWidth, setRightWidth] = useState<number>(360);
+  const rightDragRef = useRef<{ startX: number; startW: number } | null>(null);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -161,6 +167,8 @@ export default function AttackPathApp() {
     if (!text) return fallback;
     try { return JSON.parse(text) as T; } catch { return fallback; }
   }
+
+  const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
   function computeNextIdSeq(ns: Node[]): number {
     let maxNum = 0;
@@ -319,6 +327,46 @@ export default function AttackPathApp() {
   async function resetPalette() { try { localStorage.removeItem(STORAGE_KEYS.paletteJson); } catch {}; await loadPalette(); }
 
   useEffect(() => { void loadPalette(); }, []);
+
+  // Install global listeners while dragging resizers
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (leftDragRef.current) {
+        const dx = e.clientX - leftDragRef.current.startX;
+        const w = clamp(leftDragRef.current.startW + dx, 160, 640);
+        setLeftWidth(w);
+        try { document.documentElement.style.setProperty("--sidebar-width", `${w}px`); } catch {}
+      }
+      if (rightDragRef.current) {
+        const dx = e.clientX - rightDragRef.current.startX;
+        const w = clamp(rightDragRef.current.startW - dx, 260, 720);
+        setRightWidth(w);
+      }
+    };
+    const onUp = () => {
+      leftDragRef.current = null;
+      rightDragRef.current = null;
+      try { document.body.style.userSelect = ""; document.body.style.cursor = ""; } catch {}
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  const startLeftDrag = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    leftDragRef.current = { startX: e.clientX, startW: leftWidth };
+    try { document.body.style.userSelect = "none"; document.body.style.cursor = "col-resize"; } catch {}
+    e.preventDefault();
+  }, [leftWidth]);
+
+  const startRightDrag = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    rightDragRef.current = { startX: e.clientX, startW: rightWidth };
+    try { document.body.style.userSelect = "none"; document.body.style.cursor = "col-resize"; } catch {}
+    e.preventDefault();
+  }, [rightWidth]);
 
   // Header dropdown menu handlers
   useEffect(() => {
@@ -1016,7 +1064,10 @@ export default function AttackPathApp() {
   return (
     <div className="app" style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
-        {SidebarAP}
+        <div style={{ width: leftWidth, minWidth: 160, maxWidth: 640, flex: `0 0 ${leftWidth}px` }}>
+          {SidebarAP}
+        </div>
+        <div role="separator" aria-orientation="vertical" onMouseDown={startLeftDrag} style={{ width: 6, cursor: "col-resize", background: "transparent" }} />
         <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div className="content" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
@@ -1175,7 +1226,8 @@ export default function AttackPathApp() {
               </div>
             )}
           </div>
-          <div style={{ width: 360, minWidth: 260, borderLeft: "1px solid #e5e7eb", background: "#fafafa", overflow: "auto", height: "100%" }}>
+          <div role="separator" aria-orientation="vertical" onMouseDown={startRightDrag} style={{ width: 6, cursor: "col-resize", background: "transparent" }} />
+          <div style={{ width: rightWidth, minWidth: 260, flex: `0 0 ${rightWidth}px`, borderLeft: "1px solid #e5e7eb", background: "#fafafa", overflow: "auto", height: "100%" }}>
             <PropertiesPanel
               kind={selectedKind}
               nodeType={selectedNodeType}
