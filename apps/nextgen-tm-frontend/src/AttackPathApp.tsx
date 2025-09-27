@@ -93,6 +93,23 @@ const nodeStyle: React.CSSProperties = {
   textAlign: "center",
 };
 
+const footerButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  height: 40,
+  padding: "0 10px",
+  borderRadius: 6,
+  border: "1px solid #d1d5db",
+  background: "#ffffff",
+  color: "#111827",
+  fontSize: 12,
+  fontWeight: 500,
+  lineHeight: "20px",
+  boxSizing: "border-box",
+  cursor: "pointer",
+};
+
 export default function AttackPathApp() {
   const reactFlowWrapper = useRef<HTMLDivElement | null>(null);
   const [rfInstance, setRfInstance] = useState<any>(null);
@@ -775,56 +792,58 @@ export default function AttackPathApp() {
 
   const SidebarAP = useMemo(
     () => (
-      <div className="sidebar">
+      <div className="sidebar" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <h3>Attack Path Palette</h3>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
-          <button onClick={triggerImport}>Import JSON</button>
-          <button onClick={() => { void reloadPalette(); }}>Reload</button>
-          <button onClick={() => { void resetPalette(); }}>Reset Default</button>
+        <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          {paletteError && (
+            <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
+          )}
+          {!paletteError && !paletteConfig && (
+            <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
+          )}
+          {paletteConfig && paletteConfig.sections?.map((section, si) => (
+            <div key={`sec-${si}`} className="disclosure-section">
+              <div
+                className={`disclosure-header ${openSections.includes(section.title) ? "open" : ""}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => toggleSection(section.title)}
+                onKeyDown={(e) => handleSectionKeyDown(e, section.title)}
+              >
+                <span className="disclosure-title">{section.title}</span>
+                <ChevronRight className="disclosure-chevron" size={16} />
+              </div>
+              <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
+                {section.items?.map((it, ii) => (
+                  <div
+                    key={`item-${si}-${ii}-${it.label}`}
+                    className="palette-item"
+                    data-type={it.type}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("application/tm-node", it.type);
+                      if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
+                      if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                      if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
+                      if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
+                    }}
+                  >
+                    {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                    <div className="pi-text">
+                      <div className="pi-label">{it.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
+          <button style={footerButtonStyle} onClick={triggerImport}>Import JSON</button>
+          <button style={footerButtonStyle} onClick={() => { void reloadPalette(); }}>Reload</button>
+          <button style={footerButtonStyle} onClick={() => { void resetPalette(); }}>Reset Default</button>
           <input ref={fileInputRef} onChange={onFileSelected} type="file" accept="application/json" style={{ display: "none" }} />
         </div>
-        {paletteError && (
-          <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
-        )}
-        {!paletteError && !paletteConfig && (
-          <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
-        )}
-        {paletteConfig && paletteConfig.sections?.map((section, si) => (
-          <div key={`sec-${si}`} className="disclosure-section">
-            <div
-              className={`disclosure-header ${openSections.includes(section.title) ? "open" : ""}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => toggleSection(section.title)}
-              onKeyDown={(e) => handleSectionKeyDown(e, section.title)}
-            >
-              <span className="disclosure-title">{section.title}</span>
-              <ChevronRight className="disclosure-chevron" size={16} />
-            </div>
-            <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
-              {section.items?.map((it, ii) => (
-                <div
-                  key={`item-${si}-${ii}-${it.label}`}
-                  className="palette-item"
-                  data-type={it.type}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("application/tm-node", it.type);
-                    if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
-                    if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
-                    if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
-                    if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
-                  }}
-                >
-                  {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
-                  <div className="pi-text">
-                    <div className="pi-label">{it.label}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
     ),
     [paletteConfig, paletteError, openSections, toggleSection, handleSectionKeyDown]
