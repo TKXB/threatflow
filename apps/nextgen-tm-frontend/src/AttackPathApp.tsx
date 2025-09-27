@@ -595,6 +595,85 @@ export default function AttackPathApp() {
   ], []);
   const taraTable = useReactTable({ data: taraRows ?? [], columns: taraColumns, getCoreRowModel: getCoreRowModel() });
 
+  // RowSpan merge configuration and helpers for TARA table
+  // Grouping key: from Damage Scenario No. to Entry Point (inclusive)
+  const taraGroupKeyColumnIds = useMemo<string[]>(
+    () => [
+      "damageScenarioNo",
+      "damageScenario",
+      "C",
+      "I",
+      "A",
+      "threatScenarioNo",
+      "threatScenario",
+      "impactCategory",
+      "impactRating",
+      "impact",
+      "entryPoint",
+    ],
+    []
+  );
+
+  function getMergeValueForId(row: TaraRow, id: string): string | number | boolean {
+    if (id === "C") return Boolean(row.cybersecurityProperty?.C ?? false);
+    if (id === "I") return Boolean(row.cybersecurityProperty?.I ?? false);
+    if (id === "A") return Boolean(row.cybersecurityProperty?.A ?? false);
+    return (row as any)?.[id] ?? "";
+  }
+
+  const taraRowModels = taraTable.getRowModel().rows;
+  const taraRowIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    taraRowModels.forEach((r, idx) => map.set(r.id, idx));
+    return map;
+  }, [taraRowModels]);
+
+  const taraRowSpanMeta = useMemo(() => {
+    type CellMeta = { rowSpan: number; hidden: boolean };
+    const meta: Array<Record<string, CellMeta>> = taraRowModels.map(() => ({}));
+    let currentKey: string | null = null;
+    let groupTopIndex = 0;
+    // Track Attack path No. within each group separately
+    let apTopValue: any = null;
+    let apTopIndex = 0;
+    for (let i = 0; i < taraRowModels.length; i++) {
+      const original = taraRowModels[i].original as TaraRow;
+      const key = JSON.stringify(taraGroupKeyColumnIds.map((id) => getMergeValueForId(original, id)));
+      const apVal = (original as any)?.["attackPathNo"] ?? "";
+      if (currentKey === null || key !== currentKey) {
+        // New group starts: initialize group columns
+        for (const id of taraGroupKeyColumnIds) meta[i][id] = { rowSpan: 1, hidden: false };
+        // Also merge Logic across the whole group
+        meta[i]["logic"] = { rowSpan: 1, hidden: false };
+        currentKey = key;
+        groupTopIndex = i;
+        // Reset Attack path No. run inside the new group
+        apTopValue = apVal;
+        meta[i]["attackPathNo"] = { rowSpan: 1, hidden: false };
+        apTopIndex = i;
+      } else {
+        // Same group: extend group columns' rowSpan and hide current cells
+        for (const id of taraGroupKeyColumnIds) {
+          meta[groupTopIndex][id].rowSpan += 1;
+          meta[i][id] = { rowSpan: 0, hidden: true };
+        }
+        // Logic column merges across the group
+        if (meta[groupTopIndex]["logic"]) meta[groupTopIndex]["logic"].rowSpan += 1; else meta[groupTopIndex]["logic"] = { rowSpan: 2, hidden: false };
+        meta[i]["logic"] = { rowSpan: 0, hidden: true };
+        // Attack path No. within the group: sub-run merge
+        if (apVal === apTopValue) {
+          meta[apTopIndex]["attackPathNo"].rowSpan += 1;
+          meta[i]["attackPathNo"] = { rowSpan: 0, hidden: true };
+        } else {
+          apTopValue = apVal;
+          meta[i]["attackPathNo"] = { rowSpan: 1, hidden: false };
+          apTopIndex = i;
+        }
+      }
+    }
+    return meta;
+  }, [taraRowModels, taraGroupKeyColumnIds]);
+
   async function runMockAnalysisAndHighlight() {
     setAnalyzing(true);
     try {
@@ -1008,11 +1087,18 @@ export default function AttackPathApp() {
                     <tbody>
                       {taraTable.getRowModel().rows.map((row) => (
                         <tr key={row.id}>
-                          {row.getVisibleCells().map((cell) => (
-                            <td key={cell.id} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top", fontSize: 12 }}>
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </td>
-                          ))}
+                          {row.getVisibleCells().map((cell) => {
+                            const idx = taraRowIndexById.get(row.id) ?? 0;
+                            const colId = cell.column.id;
+                            const meta = (taraRowSpanMeta[idx] || {})[colId];
+                            if (meta && meta.hidden) return null;
+                            const rs = meta ? meta.rowSpan : undefined;
+                            return (
+                              <td key={cell.id} rowSpan={rs} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top", fontSize: 12 }}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>
@@ -1046,11 +1132,18 @@ export default function AttackPathApp() {
                     <tbody>
                       {taraTable.getRowModel().rows.map((row) => (
                         <tr key={row.id}>
-                          {row.getVisibleCells().map((cell) => (
-                            <td key={cell.id} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top", fontSize: 12 }}>
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </td>
-                          ))}
+                          {row.getVisibleCells().map((cell) => {
+                            const idx = taraRowIndexById.get(row.id) ?? 0;
+                            const colId = cell.column.id;
+                            const meta = (taraRowSpanMeta[idx] || {})[colId];
+                            if (meta && meta.hidden) return null;
+                            const rs = meta ? meta.rowSpan : undefined;
+                            return (
+                              <td key={cell.id} rowSpan={rs} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top", fontSize: 12 }}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>

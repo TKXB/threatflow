@@ -177,6 +177,17 @@ def default_tara_user_prompt() -> str:
         "其中 C/I/A 为布尔值；impactCategory 取 Safety/Financial/Operational/Privacy；"
         "impactRating 取 Severe/Major/Moderate/Negligible；"
         "logic 仅能为 AND/OR；feasibility 取 Low/Medium/High。"
+        "分组规则：将以下字段视为一个分组键（同一组的行这些字段必须完全一致）："
+        "[damageScenarioNo, damageScenario, C, I, A, threatScenarioNo, threatScenario, impactCategory, impactRating, impact, attackPathNo, entryPoint]。"
+        "在同一分组内可以有多条 attackPath（多行），用于描述同一个攻击路径的多个步骤/环节；"
+        "同一分组内所有行应共享相同的 attackPathNo 和 entryPoint，以便表格可进行单元格合并（rowspan）。"
+        "同一分组内的多条 attackPath 的逻辑关系用 logic 字段表示（如都必须满足则为 AND，二选一则为 OR）。"
+        "例如：某组（Entry Point: 'Cellular interface'）可包含 4 条 attackPath，且 logic=AND，表示四步都需成立。"
+        "\n\n严格的行粒度约束：每一行的 attackPath 必须只描述“一跳/一步”（两点之间的关系），"
+        "严禁在同一行中串联多个跳步。例如不要输出 ‘OBD -> Gateway -> Database’；"
+        "必须拆分为两行：第一行 ‘OBD -> Gateway’，第二行 ‘Gateway -> Database’。"
+        "若为文本描述，也需保持单步粒度（只描述一个因果/传递动作），多步请拆成多行并保持同组键一致，"
+        "并用 logic=AND/OR 说明这些行之间的关系。"
         "只输出 JSON，不要多余解释。"
     )
 
