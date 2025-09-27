@@ -1117,7 +1117,25 @@ export default function AttackPathApp() {
               </div>
             )}
             {taraRows && taraRows.length > 0 && (
-              <TaraTable rows={taraRows} onOpenFullscreen={() => setShowTaraFullscreen(true)} />
+              <TaraTable
+                rows={taraRows}
+                onOpenFullscreen={() => setShowTaraFullscreen(true)}
+                onReanalyzeRow={(rowIndex) => {
+                  (async () => {
+                    try {
+                      const res = await fetch(`${API}/analysis/llm/tara`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 1, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }) });
+                      const json = await res.json();
+                      const newRows: any[] = (json?.rows || []);
+                      if (!Array.isArray(newRows) || newRows.length === 0) return;
+                      setTaraRows((prev) => {
+                        const arr = Array.isArray(prev) ? [...prev] : [];
+                        arr[rowIndex] = newRows[0];
+                        return arr as any;
+                      });
+                    } catch (e) { console.error(e); }
+                  })();
+                }}
+              />
             )}
             {showTaraFullscreen && (
               <div style={{ position: "fixed", inset: 0, background: "#ffffff", zIndex: 50, display: "flex", flexDirection: "column" }}>

@@ -1,13 +1,20 @@
 import { useMemo } from "react";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { TaraRow } from "../types/tara";
+import { useState, useCallback, useRef } from "react";
+import ContextMenu from "./ContextMenu";
 
 type Props = {
   rows: TaraRow[] | null;
   onOpenFullscreen: () => void;
+  onReanalyzeRow?: (rowIndex: number) => void;
 };
 
-export default function TaraTable({ rows, onOpenFullscreen }: Props) {
+export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow }: Props) {
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null);
+  const [hoverRow, setHoverRow] = useState<number | null>(null);
+  const closeCtx = useCallback(() => setCtxMenu(null), []);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const taraColumns = useMemo<ColumnDef<TaraRow>[]>(() => [
     { id: "damageScenarioNo", header: () => "Damage Scenario No.", accessorKey: "damageScenarioNo", size: 120 },
     { id: "damageScenario", header: () => "Damage Scenario", accessorKey: "damageScenario", size: 240 },
@@ -44,10 +51,11 @@ export default function TaraTable({ rows, onOpenFullscreen }: Props) {
     if (id === "A") return Boolean(row.cybersecurityProperty?.A ?? false);
     return (row as any)?.[id] ?? "";
   }
-  const taraRowSpanMeta = useMemo(() => {
-    if (!taraRowModels.length) return [] as Array<Record<string, { rowSpan: number; hidden: boolean }>>;
+  const { taraRowSpanMeta, groupTopIndexByRow } = useMemo(() => {
+    if (!taraRowModels.length) return { taraRowSpanMeta: [] as Array<Record<string, { rowSpan: number; hidden: boolean }>>, groupTopIndexByRow: [] as number[] };
     type CellMeta = { rowSpan: number; hidden: boolean };
     const meta: Array<Record<string, CellMeta>> = taraRowModels.map(() => ({}));
+    const groupTopIdx: number[] = new Array(taraRowModels.length).fill(0);
     let currentKey: string | null = null;
     let groupTopIndex = 0;
     let apTopValue: any = null;
@@ -61,6 +69,7 @@ export default function TaraTable({ rows, onOpenFullscreen }: Props) {
         meta[i]["logic"] = { rowSpan: 1, hidden: false };
         currentKey = key;
         groupTopIndex = i;
+        groupTopIdx[i] = i;
         apTopValue = apVal;
         meta[i]["attackPathNo"] = { rowSpan: 1, hidden: false };
         apTopIndex = i;
@@ -79,15 +88,16 @@ export default function TaraTable({ rows, onOpenFullscreen }: Props) {
           meta[i]["attackPathNo"] = { rowSpan: 1, hidden: false };
           apTopIndex = i;
         }
+        groupTopIdx[i] = groupTopIndex;
       }
     }
-    return meta;
+    return { taraRowSpanMeta: meta, groupTopIndexByRow: groupTopIdx };
   }, [taraRowModels, taraGroupKeyColumnIds]);
 
   if (!rows || rows.length === 0) return null;
 
   return (
-    <div style={{ flex: 1, overflow: "auto", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
+    <div ref={containerRef} style={{ position: "relative", flex: 1, overflow: "auto", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
       <div style={{ padding: 8, display: "flex", alignItems: "center", gap: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>LLM TARA Table</div>
         <span style={{ flex: 1 }} />
@@ -111,15 +121,29 @@ export default function TaraTable({ rows, onOpenFullscreen }: Props) {
           </thead>
           <tbody>
             {taraTable.getRowModel().rows.map((row) => (
-              <tr key={row.id}>
+              <tr key={row.id}
+                onMouseEnter={() => setHoverRow(Number(row.id))}
+                onMouseLeave={() => setHoverRow((prev) => (prev === Number(row.id) ? null : prev))}
+                onContextMenu={(e) => {
+                e.preventDefault();
+                  const containerRect = containerRef.current?.getBoundingClientRect();
+                  const x = containerRect ? e.clientX - containerRect.left : e.clientX;
+                  const y = containerRect ? e.clientY - containerRect.top : e.clientY;
+                  setCtxMenu({ x, y, rowIndex: Number(row.id) });
+                }}>
                 {row.getVisibleCells().map((cell) => {
                   const idx = taraRowIndexById.get(row.id) ?? 0;
                   const colId = cell.column.id;
                   const meta = (taraRowSpanMeta[idx] || {})[colId];
                   if (meta && meta.hidden) return null;
+                  const hoveredGroupTop = hoverRow !== null ? groupTopIndexByRow[hoverRow] : null;
+                  const isHoveredRow = hoverRow === Number(row.id);
+                  const isGroupTopForHovered = hoveredGroupTop !== null && Number(row.id) === hoveredGroupTop;
+                  const groupColsForHover = new Set(["logic", "attackPathNo", ...taraGroupKeyColumnIds]);
+                  const shouldHighlight = isHoveredRow || (isGroupTopForHovered && groupColsForHover.has(colId));
                   const rs = meta ? meta.rowSpan : undefined;
                   return (
-                    <td key={cell.id} rowSpan={rs} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top", fontSize: 12 }}>
+                    <td key={cell.id} rowSpan={rs} style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", verticalAlign: "top", fontSize: 12, background: shouldHighlight ? "#f9fafb" : undefined }}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   );
@@ -129,6 +153,16 @@ export default function TaraTable({ rows, onOpenFullscreen }: Props) {
           </tbody>
         </table>
       </div>
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={closeCtx}
+          items={[
+            { key: "reanalyze", label: "Reanalyze (LLM)", onClick: () => { onReanalyzeRow && onReanalyzeRow(ctxMenu.rowIndex); closeCtx(); } },
+          ]}
+        />
+      )}
     </div>
   );
 }
