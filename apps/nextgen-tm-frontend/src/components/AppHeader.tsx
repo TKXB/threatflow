@@ -1,6 +1,20 @@
 import { Workflow, Bell, ChevronsUpDown, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export default function AppHeader({ project = "Starter Project", title = "Attack Path", count, mode, onSelectMode, onMenuAction }: { project?: string; title?: string; count?: number; mode: "tm" | "ap"; onSelectMode: (m: "tm" | "ap") => void; onMenuAction?: (key: string) => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(ev: MouseEvent) {
+      if (!menuRef.current) return;
+      if (ev.target instanceof Node && !menuRef.current.contains(ev.target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const display = typeof count === "number" ? `${title} (${count})` : title;
   return (
     <div className="app-header" data-testid="app-header">
@@ -23,8 +37,8 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
         </div>
       </div>
       <div className="header-right" data-testid="header_right_section_wrapper">
-        <div className="dropdown" data-testid="ap-menu">
-          <button className="dropdown-trigger">
+        <div ref={menuRef} className={`dropdown${menuOpen ? " open" : ""}`} data-testid="ap-menu">
+          <button className="dropdown-trigger" onClick={() => setMenuOpen(v => !v)}>
             Options
             <ChevronDown size={18} />
           </button>

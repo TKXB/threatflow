@@ -17,7 +17,12 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const closeCtx = useCallback(() => setCtxMenu(null), []);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [heightPx, setHeightPx] = useState<number | null>(null);
+  const isResizingRef = useRef(false);
+  const startYRef = useRef<number>(0);
+  const startHeightRef = useRef<number>(0);
   const taraColumns = useMemo<ColumnDef<TaraRow>[]>(() => [
     { id: "damageScenarioNo", header: () => "Damage Scenario No.", accessorKey: "damageScenarioNo", size: 120 },
     { id: "damageScenario", header: () => "Damage Scenario", accessorKey: "damageScenario", size: 240 },
@@ -99,8 +104,44 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
 
   if (!rows || rows.length === 0) return null;
 
+  const onResizeMouseDownTop = useCallback((e) => {
+    e.preventDefault();
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const rect = wrapper.getBoundingClientRect();
+    isResizingRef.current = true;
+    startYRef.current = e.clientY;
+    startHeightRef.current = rect.height;
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const delta = startYRef.current - ev.clientY; // 向上拖增高
+      const next = Math.max(160, Math.round(startHeightRef.current + delta));
+      setHeightPx(next);
+    };
+    const onMouseUp = () => {
+      isResizingRef.current = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, []);
+
+  const onResizeDoubleClickTop = useCallback(() => setHeightPx(null), []);
+
   return (
-    <div ref={containerRef} style={{ position: "relative", flex: 1, overflow: "auto", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
+    <div
+      ref={wrapperRef}
+      style={{ position: "relative", flex: heightPx === null ? 1 : undefined, height: heightPx === null ? undefined : heightPx, minHeight: 160, background: "#fff", borderTop: "1px solid #e5e7eb", overflow: "hidden" }}
+    >
+      <div
+        aria-label="Resize TARA table"
+        title="Drag top border to resize (double-click to reset)"
+        onMouseDown={onResizeMouseDownTop}
+        onDoubleClick={onResizeDoubleClickTop}
+        style={{ position: "absolute", left: 0, right: 0, top: 0, height: 8, cursor: "row-resize", background: "transparent", zIndex: 2 }}
+      />
+      <div ref={containerRef} style={{ position: "relative", height: "100%", overflow: "auto" }}>
       <div style={{ padding: 8, display: "flex", alignItems: "center", gap: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>LLM TARA Table</div>
         <span style={{ flex: 1 }} />
@@ -181,6 +222,7 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
           ]}
         />
       )}
+      </div>
     </div>
   );
 }

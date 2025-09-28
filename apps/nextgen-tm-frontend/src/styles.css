@@ -29,7 +29,7 @@ html,body,#root{ height:100%; margin:0; }
 .dropdown{ position:relative; }
 .dropdown-trigger{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; border:1px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; }
 .dropdown-content{ position:absolute; right:0; top:100%; margin-top:8px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; min-width:220px; box-shadow:0 10px 25px rgba(0,0,0,0.10); padding:6px; display:none; z-index:60; }
-.dropdown:hover .dropdown-content{ display:block; }
+.dropdown.open .dropdown-content{ display:block; }
 .dropdown-item{ padding:8px 10px; border-radius:6px; font-size:13px; color:#111827; cursor:pointer; }
 .dropdown-item:hover{ background:#f3f4f6; }
 .dropdown-sep{ height:1px; background:#e5e7eb; margin:4px 0; }
