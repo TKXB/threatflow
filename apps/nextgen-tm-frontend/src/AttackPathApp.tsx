@@ -27,7 +27,7 @@ import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X } from "lucide-react";
+import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon } from "lucide-react";
 import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
 
@@ -124,6 +124,9 @@ export default function AttackPathApp() {
   // Right properties panel resizable width
   const [rightWidth, setRightWidth] = useState<number>(360);
   const rightDragRef = useRef<{ startX: number; startW: number } | null>(null);
+  const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const [future, setFuture] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -886,6 +889,86 @@ export default function AttackPathApp() {
   );
 
   // Toolbar removed – actions moved to header dropdown
+  // Reintroduce a canvas-level toolbar with GraphButtons.vue-like actions
+
+  function pushHistorySnapshot() {
+    try {
+      const snapshot = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) } as { nodes: Node[]; edges: Edge[] };
+      setHistory((h) => [...h, snapshot]);
+      setFuture([]);
+    } catch {}
+  }
+
+  const undo = useCallback(() => {
+    setHistory((h) => {
+      if (h.length === 0) return h;
+      const prev = h[h.length - 1];
+      setFuture((f) => [...f, { nodes: nodes, edges: edges }]);
+      setNodes(prev.nodes as any);
+      setEdges(prev.edges as any);
+      return h.slice(0, -1);
+    });
+  }, [nodes, edges]);
+
+  const redo = useCallback(() => {
+    setFuture((f) => {
+      if (f.length === 0) return f;
+      const next = f[f.length - 1];
+      setHistory((h) => [...h, { nodes: nodes, edges: edges }]);
+      setNodes(next.nodes as any);
+      setEdges(next.edges as any);
+      return f.slice(0, -1);
+    });
+  }, [nodes, edges]);
+
+  const deleteSelected = useCallback(() => {
+    const selectedNodeIds = new Set((nodes || []).filter((n: any) => (n as any).selected).map((n) => n.id));
+    const selectedEdgeIds = new Set((edges || []).filter((e: any) => (e as any).selected).map((e) => e.id));
+    if (selectedNodeIds.size === 0 && selectedEdgeIds.size === 0) return;
+    pushHistorySnapshot();
+    setNodes((nds) => nds.filter((n) => !selectedNodeIds.has(n.id)));
+    setEdges((eds) => eds.filter((e) => !selectedEdgeIds.has(e.id) && !selectedNodeIds.has((e as any).source) && !selectedNodeIds.has((e as any).target)));
+  }, [nodes, edges]);
+
+  // zoom controls removed per request
+
+  const exportOtm = useCallback(() => {
+    const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
+    download("model.otm.json", JSON.stringify(otm, null, 2), "application/json");
+  }, [nodes, edges]);
+
+  const exportThreagile = useCallback(() => {
+    const yaml = buildThreagileYaml(nodes as any, edges as any, "Model");
+    download("model.threagile.yaml", yaml, "text/yaml");
+  }, [nodes, edges]);
+
+  const saveModel = useCallback(() => { try { const otm = buildOtmFromGraph(nodes as any, edges as any, "Model"); download("model.save.json", JSON.stringify(otm, null, 2), "application/json"); } catch {} }, [nodes, edges]);
+  const closeDiagram = useCallback(() => { setNodes([] as any); setEdges([] as any); }, []);
+
+  const showShortcuts = useCallback(() => {
+    try {
+      alert("Shortcuts:\n- Delete: remove selection\n- Right click: context menu\n- Drag between handles: connect nodes");
+    } catch {}
+  }, []);
+
+  const handleNodesChange = useCallback((changes: any) => {
+    try {
+      if (Array.isArray(changes) && changes.some((c: any) => String(c?.type || "") !== "select")) {
+        pushHistorySnapshot();
+      }
+    } catch {}
+    (onNodesChange as OnNodesChange)(changes);
+    setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
+  }, [onNodesChange, setNodes, nodes, edges]);
+
+  const handleEdgesChange = useCallback((changes: any) => {
+    try {
+      if (Array.isArray(changes) && changes.some((c: any) => String(c?.type || "") !== "select")) {
+        pushHistorySnapshot();
+      }
+    } catch {}
+    (onEdgesChange as OnEdgesChange)(changes);
+  }, [onEdgesChange, nodes, edges]);
 
   const onSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
     if (params.nodes.length === 1) {
@@ -1056,15 +1139,28 @@ export default function AttackPathApp() {
         <div className="content" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             {(() => { const hasBottom = (llmMethods && llmMethods.length > 0) || (taraRows && taraRows.length > 0) || taraLoading; return (
-            <div className="flow" style={{ height: hasBottom ? "50%" : "100%" }}>
+            <div className="flow" style={{ height: hasBottom ? "50%" : "100%", position: "relative" }}>
+              <div style={{ position: "absolute", right: 12, top: 12, zIndex: 20 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+                  <button title="Delete" onClick={deleteSelected} style={footerButtonStyle}><Trash size={16} /></button>
+                  <button title="Shortcuts" onClick={showShortcuts} style={footerButtonStyle}><Keyboard size={16} /></button>
+                  <button title="Undo" onClick={undo} style={footerButtonStyle}><Undo2 size={16} /></button>
+                  <button title="Redo" onClick={redo} style={footerButtonStyle}><Redo2 size={16} /></button>
+                  {/** zoom buttons removed **/}
+                  <button title="Toggle Grid" onClick={() => setShowGrid((v) => !v)} style={footerButtonStyle}><GridIcon size={16} /></button>
+                  <span style={{ width: 8 }} />
+                  <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
+                  <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
+                  <span style={{ width: 8 }} />
+                  <button title="Close" onClick={closeDiagram} style={footerButtonStyle}><X size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Close</span></button>
+                  <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
+                </div>
+              </div>
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
-                onNodesChange={(changes) => {
-                  (onNodesChange as OnNodesChange)(changes);
-                  setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
-                }}
-                onEdgesChange={onEdgesChange as OnEdgesChange}
+                onNodesChange={handleNodesChange as OnNodesChange}
+                onEdgesChange={handleEdgesChange as OnEdgesChange}
                 onConnect={onConnect}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
@@ -1078,7 +1174,7 @@ export default function AttackPathApp() {
                 onEdgeContextMenu={onEdgeContext}
                 onNodeDragStop={onNodeDragStop}
               >
-                <Background gap={16} color="#f3f4f6" />
+                {showGrid && <Background gap={16} color="#f3f4f6" />}
                 <MiniMap />
                 <Controls />
               </ReactFlow>
