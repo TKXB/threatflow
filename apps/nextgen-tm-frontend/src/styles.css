@@ -4,7 +4,7 @@ html,body,#root{ height:100%; margin:0; }
 .app, .sidebar, .toolbar, .content, .right-panel { font-family: var(--font-sans, Inter, sans-serif); }
 .code, pre, code, kbd, samp { font-family: var(--font-mono, "JetBrains Mono", monospace); }
 .app{ display:flex; height:100%; width:100%; }
-.app-header{ position:relative; z-index:10; display:flex; height:48px; width:100%; align-items:center; justify-content:space-between; border-bottom:1px solid #e5e7eb; padding:0 24px; background:#fff; }
+.app-header{ position:relative; z-index:200; display:flex; height:48px; width:100%; align-items:center; justify-content:space-between; border-bottom:1px solid #e5e7eb; padding:0 24px; background:#fff; }
 .header-left{ z-index:30; display:flex; align-items:center; gap:8px; }
 .icon-btn{ display:flex; align-items:center; justify-content:center; width:32px; height:32px; border:0; background:transparent; cursor:pointer; color:#111827; }
 .header-center{ position:absolute; left:50%; transform:translateX(-50%); }
