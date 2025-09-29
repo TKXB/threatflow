@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type MouseEvent as ReactMouseEvent } from "react";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { TaraRow } from "../types/tara";
 import { useState, useCallback, useRef } from "react";
@@ -105,7 +105,7 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
 
   if (!rows || rows.length === 0) return null;
 
-  const onResizeMouseDownTop = useCallback((e) => {
+  const onResizeMouseDownTop = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -192,7 +192,7 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
             {taraTable.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((header) => (
-                  <th key={header.id} style={{ textAlign: "left", fontSize: 12, color: "#6b7280", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>
+                  <th key={header.id} style={{ position: "sticky", top: 0, textAlign: "left", fontSize: 12, color: "#6b7280", padding: "6px 8px", background: "#fff", borderBottom: "1px solid #e5e7eb", zIndex: 1 }}>
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
