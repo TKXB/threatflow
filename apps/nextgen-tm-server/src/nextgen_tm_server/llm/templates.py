@@ -114,7 +114,10 @@ def build_tara_schema() -> dict[str, Any]:
                                 "additionalProperties": False,
                             },
                             "threatScenarioNo": build_id_string_schema("TS", 3),
-                            "threatScenario": {"type": "string"},
+                            "threatScenario": {
+                                "type": "string",
+                                "pattern": r"^(?:Spoofing|Tampering|Repudiation|Information Disclosure|Denial of Service|Elevation of Privilege)\s:\s.+$",
+                            },
                             "impactCategory": {
                                 "type": "string",
                                 "enum": [
@@ -189,6 +192,14 @@ def default_tara_user_prompt() -> str:
         "其中 C/I/A 为布尔值；impactCategory 取 Safety/Financial/Operational/Privacy；"
         "impactRating 取 Severe/Major/Moderate/Negligible；"
         "logic 仅能为 AND/OR；feasibility 取 Low/Medium/High。"
+        "\n\ndamageScenario 字段要求：围绕 Safety/Financial/Operational/Privacy 中的一个类别进行描述，"
+        "其语义需与该行的 impactCategory 一致，但不要求以类别前缀或固定格式开头。"
+        "\n\n关于 threatScenario 字段：使用 STRIDE 方法进行分析，且每条 threatScenario 仅允许一个类型（S/T/R/I/D/E 之一）。"
+        "格式：'<单一 STRIDE 全称> : <简短威胁描述>'，全称取自："
+        "Spoofing/Tampering/Repudiation/Information Disclosure/Denial of Service/Elevation of Privilege。"
+        "如果同一 Damage Scenario 涉及多个 STRIDE 类型，须拆分为多条 Threat Scenario（分别给出不同的 threatScenarioNo 与 threatScenario），"
+        "其余该 Damage Scenario 的字段保持一致。"
+        "示例：'Information Disclosure : 通过未授权 API 读取敏感数据'。"
         "分组规则：将以下字段视为一个分组键（同一组的行这些字段必须完全一致）："
         "[damageScenarioNo, damageScenario, C, I, A, threatScenarioNo, threatScenario, impactCategory, impactRating, impact, attackPathNo, entryPoint]。"
         "在同一分组内可以有多条 attackPath（多行），用于描述同一个攻击路径的多个步骤/环节；"
