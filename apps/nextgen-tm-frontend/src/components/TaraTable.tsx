@@ -4,6 +4,7 @@ import type { TaraRow } from "../types/tara";
 import { useState, useCallback, useRef } from "react";
 import ContextMenu from "./ContextMenu";
 import { Maximize2, X } from "lucide-react";
+import * as XLSX from "xlsx";
 
 type Props = {
   rows: TaraRow[] | null;
@@ -129,6 +130,36 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
 
   const onResizeDoubleClickTop = useCallback(() => setHeightPx(null), []);
 
+  const onExportExcel = useCallback(() => {
+    try {
+      const cols = (taraColumns as Array<any>).map((c) => {
+        const headerText = typeof c.header === "function" ? c.header() : (c.header ?? c.id ?? "");
+        return { id: String(c.id ?? c.accessorKey ?? ""), headerText: String(headerText) };
+      });
+      const data = (rows ?? []).map((r) => {
+        const rowObj: Record<string, any> = {};
+        for (const col of cols) {
+          let value: any = "";
+          if (col.id === "C" || col.id === "I" || col.id === "A") {
+            const key = col.id as "C" | "I" | "A";
+            value = Boolean((r as any)?.cybersecurityProperty?.[key] ?? false);
+          } else {
+            value = (r as any)?.[col.id] ?? "";
+          }
+          rowObj[col.headerText] = value;
+        }
+        return rowObj;
+      });
+      const headers = cols.map((c) => c.headerText);
+      const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "TARA");
+      XLSX.writeFile(workbook, "tara.xlsx");
+    } catch (err) {
+      console.error("Export Excel failed", err);
+    }
+  }, [rows, taraColumns]);
+
   return (
     <div
       ref={wrapperRef}
@@ -145,6 +176,9 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
       <div style={{ padding: 8, display: "flex", alignItems: "center", gap: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>LLM TARA Table</div>
         <span style={{ flex: 1 }} />
+        <button onClick={onExportExcel} title="Export Excel" aria-label="Export Excel" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#111827", background: "transparent", border: 0, cursor: "pointer" }}>
+          Export Excel
+        </button>
         <button onClick={onOpenFullscreen} title="Open full screen" aria-label="Open full screen" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#2563eb", background: "transparent", border: 0, cursor: "pointer" }}>
           <Maximize2 size={13} />
         </button>
