@@ -211,7 +211,14 @@ def default_tara_user_prompt() -> str:
         "必须拆分为两行：第一行 ‘OBD -> Gateway’，第二行 ‘Gateway -> Database’。"
         "若为文本描述，也需保持单步粒度（只描述一个因果/传递动作），多步请拆成多行并保持同组键一致，"
         "并用 logic=AND/OR 说明这些行之间的关系。"
-        "只输出 JSON，不要多余解释。"
+        "\n\n覆盖性与一致性强约束："
+        "1) 必须覆盖所有 `type: entryPoint` 的节点。对每一个 entryPoint，至少产生一组 rows，"
+        "且这些 rows 的 `entryPoint` 字段取值都必须等于该入口节点的 label（或 nodes 中的可读名称）。"
+        "2) 每一行必须满足 `entryPoint == attackPath 左侧节点`（即 'X -> Y' 中的 X）。"
+        "如果出现不一致，应以 attackPath 左侧为准修正 `entryPoint`。"
+        "3) 不得复用上一组的 entryPoint 值到新组；每组以固定的 entryPoint 开始，"
+        "同组内所有行共享相同的 `attackPathNo` 与 `entryPoint`。"
+        "\n\n只输出 JSON，不要多余解释。"
     )
 
 def _dump_models_or_dicts(items: Iterable[Any]) -> list[dict[str, Any]]:
