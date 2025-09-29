@@ -2,7 +2,7 @@
   "id": "asset.web.http",
   "label": "Web Server",
   "icon": "🌐",
-  "type": "store",
+  "type": "asset",
   "technology": "http",
   "flags": {
     "publicNetwork": "yes",

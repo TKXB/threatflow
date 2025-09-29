@@ -2,7 +2,7 @@
   "id": "asset.modbus.plc",
   "label": "Modbus PLC",
   "icon": "🏭",
-  "type": "store",
+  "type": "asset",
   "technology": "plc",
   "priority": 70
 }

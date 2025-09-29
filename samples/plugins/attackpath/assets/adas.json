@@ -2,7 +2,7 @@
   "id": "asset.auto.adas",
   "label": "ADAS",
   "icon": "🧠",
-  "type": "store",
+  "type": "asset",
   "technology": "adas",
   "priority": 70
 }

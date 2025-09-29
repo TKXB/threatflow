@@ -2,7 +2,7 @@
   "id": "asset.mobile.app",
   "label": "Mobile App",
   "icon": "📱",
-  "type": "store",
+  "type": "asset",
   "technology": "mobile-app",
   "priority": 100
 }

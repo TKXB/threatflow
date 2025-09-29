@@ -2,7 +2,7 @@
   "id": "asset.auto.gateway",
   "label": "Gateway",
   "icon": "🛡️",
-  "type": "store",
+  "type": "asset",
   "technology": "gateway",
   "priority": 60
 }

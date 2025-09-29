@@ -242,6 +242,42 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
             )}
           </div>
         );
+      case "asset":
+        return (
+          <div className="right-panel" style={panelStyle}>
+            <h3>Asset</h3>
+            <RowInput
+              label="Label"
+              value={data?.label ?? ""}
+              placeholder="Asset label"
+              onChange={(v) => onNodeChange({ label: v })}
+            />
+            <RowSelect
+              label="Target"
+              value={data?.isTarget ?? "no"}
+              options={[
+                { value: "no", label: "No" },
+                { value: "yes", label: "Yes" },
+              ]}
+              onChange={(v) => onNodeChange({ isTarget: v })}
+            />
+            <RowSelect
+              label="Impact (1-5)"
+              value={(data?.impact ?? "4").toString()}
+              options={[
+                { value: "1", label: "1" },
+                { value: "2", label: "2" },
+                { value: "3", label: "3" },
+                { value: "4", label: "4" },
+                { value: "5", label: "5" },
+              ]}
+              onChange={(v) => onNodeChange({ impact: v })}
+            />
+            {Array.isArray((data as any)?.properties) && (
+              <DynamicFields defs={(data as any).properties as any} data={data} onChange={onNodeChange} />
+            )}
+          </div>
+        );
       case "trustBoundary":
         return (
           <div className="right-panel" style={panelStyle}>

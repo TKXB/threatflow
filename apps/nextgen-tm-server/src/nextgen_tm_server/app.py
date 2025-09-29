@@ -414,8 +414,31 @@ def analysis_tara_llm(req: LlmMethodsRequest) -> dict[str, Any]:
             len(req.edges),
             len(paths),
         )
+        # Log outbound POST body to OpenAI-compatible endpoint (truncated)
+        try:
+            outbound_body = json.dumps(payload, ensure_ascii=False)
+            max_len = int(os.getenv("LLM_REQ_LOG_MAX_BYTES", "20000") or "20000")
+            if len(outbound_body) > max_len:
+                outbound_body = outbound_body[:max_len] + f"... (truncated {len(outbound_body)-max_len} bytes)"
+            logger.info("LLM upstream POST %s/chat/completions body=%s", llm_base, outbound_body)
+        except Exception:
+            logger.exception("Failed to log LLM upstream request body")
         r = httpx.post(f"{llm_base}/chat/completions", headers=headers, json=payload, timeout=60)
         r.raise_for_status()
+        # Log inbound response body (truncated)
+        try:
+            inbound_body = r.text or ""
+            max_len_resp = int(os.getenv("LLM_RESP_LOG_MAX_BYTES", "20000") or "20000")
+            if len(inbound_body) > max_len_resp:
+                inbound_body = inbound_body[:max_len_resp] + f"... (truncated {len(inbound_body)-max_len_resp} bytes)"
+            logger.info(
+                "LLM upstream RESP %s/chat/completions status=%d body=%s",
+                llm_base,
+                r.status_code,
+                inbound_body,
+            )
+        except Exception:
+            logger.exception("Failed to log LLM upstream response body")
         elapsed = time.perf_counter() - t0
         data = r.json()
         content = (data.get("choices") or [{}])[0].get("message", {}).get("content", "{}")

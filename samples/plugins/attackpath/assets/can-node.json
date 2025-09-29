@@ -2,7 +2,7 @@
   "id": "asset.can.node",
   "label": "CAN Bus Node",
   "icon": "🚗",
-  "type": "store",
+  "type": "asset",
   "technology": "can",
   "priority": 80
 }

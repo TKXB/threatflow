@@ -211,12 +211,17 @@ def default_tara_user_prompt() -> str:
         "必须拆分为两行：第一行 ‘OBD -> Gateway’，第二行 ‘Gateway -> Database’。"
         "若为文本描述，也需保持单步粒度（只描述一个因果/传递动作），多步请拆成多行并保持同组键一致，"
         "并用 logic=AND/OR 说明这些行之间的关系。"
+        "\n\n连贯性规则："
+        "同一分组内按从入口到目标的顺序逐步展开：第 1 行必须满足 `entryPoint == attackPath 左侧节点`；"
+        "组内第 k(>1) 行必须满足 `该行 attackPath 左侧节点 == 上一行 attackPath 右侧节点`，形成链式路径。"
+        "各行的 `entryPoint` 字段固定为分组入口，不随后续步骤变化。"
         "\n\n覆盖性与一致性强约束："
         "1) 必须覆盖所有 `type: entryPoint` 的节点。对每一个 entryPoint，至少产生一组 rows，"
         "且这些 rows 的 `entryPoint` 字段取值都必须等于该入口节点的 label（或 nodes 中的可读名称）。"
-        "2) 每一行必须满足 `entryPoint == attackPath 左侧节点`（即 'X -> Y' 中的 X）。"
-        "如果出现不一致，应以 attackPath 左侧为准修正 `entryPoint`。"
-        "3) 不得复用上一组的 entryPoint 值到新组；每组以固定的 entryPoint 开始，"
+        "2) 若图中存在 `data.isTarget == \"yes\"` 的节点（例如 Database），应尽量将路径延伸至该目标节点："
+        "即在至少一组 rows 中，最后一行的 attackPath 右侧节点为某个目标节点。若不可达，则延伸至最近的高价值资产。"
+        "3) 若提供了 `paths`（Entry→Target 候选路径），优先采用并逐跳拆分覆盖；若未提供，则基于 nodes/edges 自行推导可达的最短（或较短）路径。"
+        "4) 不得复用上一组的 entryPoint 值到新组；每组以固定的 entryPoint 开始，"
         "同组内所有行共享相同的 `attackPathNo` 与 `entryPoint`。"
         "\n\n只输出 JSON，不要多余解释。"
     )
@@ -287,6 +292,20 @@ def build_chat_completion_payload(
     edges_json = json.dumps(_dump_models_or_dicts(edges), ensure_ascii=False)
     paths_json = json.dumps(paths, ensure_ascii=False)
 
+    # 额外提供目标节点列表，帮助模型优先延伸至目标资产
+    target_nodes: list[dict[str, Any]] = []
+    for n in normalized_nodes:
+        data_dict = dict(n.get("data") or {})
+        is_target_raw = str(data_dict.get("isTarget", "")).strip().lower()
+        is_target = is_target_raw in ("yes", "true", "1")
+        if is_target:
+            target_nodes.append({
+                "id": n.get("id"),
+                "label": data_dict.get("label"),
+                "technology": data_dict.get("technology"),
+            })
+    targets_json = json.dumps(target_nodes, ensure_ascii=False)
+
     messages = [
         {
             "role": "user",
@@ -294,6 +313,7 @@ def build_chat_completion_payload(
                 f"nodes: {nodes_json}\n"
                 f"edges: {edges_json}\n"
                 f"paths: {paths_json}\n\n"
+                f"targets: {targets_json}\n\n"
                 f"{user_prompt}"
             ),
         }

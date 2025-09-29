@@ -2,7 +2,7 @@
   "id": "asset.camera.ip",
   "label": "Camera",
   "icon": "📷",
-  "type": "store",
+  "type": "asset",
   "technology": "camera",
   "priority": 40
 }

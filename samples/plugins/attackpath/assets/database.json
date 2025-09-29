@@ -2,7 +2,7 @@
   "id": "asset.database.postgres",
   "label": "Database",
   "icon": "🗄️",
-  "type": "store",
+  "type": "asset",
   "technology": "postgres",
   "flags": {
     "impact": "4",

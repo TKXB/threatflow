@@ -2,7 +2,7 @@
   "id": "asset.cloud.s3",
   "label": "Cloud Storage",
   "icon": "☁️",
-  "type": "store",
+  "type": "asset",
   "technology": "s3",
   "priority": 90
 }

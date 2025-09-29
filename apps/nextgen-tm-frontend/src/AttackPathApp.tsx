@@ -22,6 +22,7 @@ import EntryPointNode from "./nodes/EntryPointNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
+import AssetNode from "./nodes/AssetNode";
 import type { ScoredPath } from "./utils/pathAnalysis";
 import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
@@ -132,6 +133,7 @@ export default function AttackPathApp() {
       actor: ActorNode,
       entryPoint: EntryPointNode,
       process: ProcessNode,
+      asset: AssetNode,
       store: StoreNode,
       trustBoundary: TrustBoundaryNode,
     } as any),
@@ -773,6 +775,7 @@ export default function AttackPathApp() {
       const technology = event.dataTransfer.getData("application/tm-node-tech");
       const customLabel = event.dataTransfer.getData("application/tm-node-label");
       const flagsRaw = event.dataTransfer.getData("application/tm-node-flags");
+      const iconFromDrag = event.dataTransfer.getData("application/tm-node-icon");
       const propsRaw = event.dataTransfer.getData("application/tm-node-props");
       let extraFlags: Record<string, any> | undefined;
       let extraProps: any[] | undefined;
@@ -793,6 +796,7 @@ export default function AttackPathApp() {
         || (type === "actor" ? (technology || "Actor")
         : type === "entryPoint" ? (technology || "Entry Point")
         : type === "process" ? (technology || "Process")
+        : type === "asset" ? (technology || "Asset")
         : type === "store" ? (technology || "Store")
         : "Trust Boundary");
 
@@ -800,6 +804,7 @@ export default function AttackPathApp() {
         actor: { width: 64, height: 64 },
         entryPoint: { width: 80, height: 80 },
         process: { width: 120, height: 60 },
+        asset: { width: 100, height: 100 },
         store: { width: 120, height: 70 },
         trustBoundary: { width: 260, height: 160 },
       };
@@ -818,7 +823,7 @@ export default function AttackPathApp() {
 
       setNodes((nds) => [
         ...nds,
-        { id, position, data: { label, technology: technology || undefined, ...(extraFlags || {}), ...(dynamicProps ? { properties: dynamicProps } : {}) }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 },
+        { id, position, data: { label, technology: technology || undefined, ...(iconFromDrag ? { icon: iconFromDrag } : {}), ...(extraFlags || {}), ...(dynamicProps ? { properties: dynamicProps } : {}) }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 },
       ]);
     },
     [idSeq, rfInstance]
@@ -863,6 +868,7 @@ export default function AttackPathApp() {
                       e.dataTransfer.setData("application/tm-node", it.type);
                       if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
                       if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                      if ((it as any).icon) e.dataTransfer.setData("application/tm-node-icon", String((it as any).icon));
                       if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
                       if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
                     }}
@@ -974,14 +980,14 @@ export default function AttackPathApp() {
     if (params.nodes.length === 1) {
       const n = params.nodes[0] as any;
       // Backfill properties for assets if missing by looking up from current palette
-      if (n.type === "store" && (!Array.isArray(n.data?.properties) || n.data?.properties.length === 0)) {
+      if ((n.type === "store" || n.type === "asset") && (!Array.isArray(n.data?.properties) || n.data?.properties.length === 0)) {
         const tech = String(n.data?.technology || "").toLowerCase();
         const label = String(n.data?.label || "");
         let defs: any[] | undefined;
         if (paletteConfig && Array.isArray(paletteConfig.sections)) {
           for (const section of paletteConfig.sections) {
             for (const item of section.items || []) {
-              if (String(item.type) === "store") {
+              if (String(item.type) === "store" || String(item.type) === "asset") {
                 const itTech = String(item.technology || "").toLowerCase();
                 if ((itTech && itTech === tech) || (!itTech && item.label === label)) {
                   defs = (item as any).properties || (item as any).flags?.properties || undefined;
@@ -1077,6 +1083,7 @@ export default function AttackPathApp() {
       actor: { w: 64, h: 64 },
       entryPoint: { w: 80, h: 80 },
       process: { w: 120, h: 60 },
+      asset: { w: 100, h: 100 },
       store: { w: 120, h: 70 },
       trustBoundary: { w: 260, h: 160 },
     };

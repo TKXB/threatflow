@@ -2,7 +2,7 @@
   "id": "asset.auto.ivi",
   "label": "IVI",
   "icon": "🎛️",
-  "type": "store",
+  "type": "asset",
   "technology": "ivi",
   "priority": 75
 }

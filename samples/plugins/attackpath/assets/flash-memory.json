@@ -2,7 +2,7 @@
   "id": "asset.flash.memory",
   "label": "Flash Memory",
   "icon": "💽",
-  "type": "store",
+  "type": "asset",
   "technology": "flash",
   "priority": 60
 }
