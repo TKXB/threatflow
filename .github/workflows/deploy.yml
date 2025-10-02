@@ -51,14 +51,18 @@ jobs:
       - name: Start/Reload backend (uvicorn 8890)
         shell: bash
         run: |
-          pm2 describe nextgen-tm-backend >/dev/null 2>&1 || pm2 start "bash -lc 'source .venv/bin/activate && uvicorn nextgen_tm_server.app:app --host 0.0.0.0 --port 8890'" --name nextgen-tm-backend
+          pm2 describe nextgen-tm-backend >/dev/null 2>&1 || pm2 start "bash -lc 'cd \"$GITHUB_WORKSPACE\" && source .venv/bin/activate && exec uvicorn nextgen_tm_server.app:app --host 0.0.0.0 --port 8890'" --name nextgen-tm-backend --cwd "$GITHUB_WORKSPACE"
           pm2 reload nextgen-tm-backend
+          pm2 status
+          pm2 logs nextgen-tm-backend --lines 50 || true
 
       - name: Start/Reload frontend (vite preview 5173)
         shell: bash
         run: |
-          pm2 describe nextgen-tm-frontend >/dev/null 2>&1 || pm2 start "npm --prefix apps/nextgen-tm-frontend run preview -- --host 0.0.0.0" --name nextgen-tm-frontend
+          pm2 describe nextgen-tm-frontend >/dev/null 2>&1 || pm2 start "bash -lc 'cd \"$GITHUB_WORKSPACE/apps/nextgen-tm-frontend\" && exec npx vite preview --host 0.0.0.0 --port 5173'" --name nextgen-tm-frontend --cwd "$GITHUB_WORKSPACE/apps/nextgen-tm-frontend"
           pm2 reload nextgen-tm-frontend
           pm2 save
+          pm2 status
+          pm2 logs nextgen-tm-frontend --lines 50 || true
 
 
