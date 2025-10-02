@@ -22,18 +22,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Enable corepack and pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
-
-      - name: Install frontend deps
-        run: pnpm -C apps/nextgen-tm-frontend install --no-frozen-lockfile
+      - name: Install frontend deps (npm ci)
+        run: npm ci --prefix apps/nextgen-tm-frontend
 
       - name: Build frontend
         env:
           VITE_NEXTGEN_API: "http://36.255.220.102:8890"
-        run: pnpm -C apps/nextgen-tm-frontend build
+        run: npm --prefix apps/nextgen-tm-frontend run build
 
       - name: Install PM2 globally
         run: npm i -g pm2
@@ -62,7 +57,7 @@ jobs:
       - name: Start/Reload frontend (vite preview 5173)
         shell: bash
         run: |
-          pm2 describe nextgen-tm-frontend >/dev/null 2>&1 || pm2 start "pnpm --dir apps/nextgen-tm-frontend run preview -- --host 0.0.0.0" --name nextgen-tm-frontend
+          pm2 describe nextgen-tm-frontend >/dev/null 2>&1 || pm2 start "npm --prefix apps/nextgen-tm-frontend run preview -- --host 0.0.0.0" --name nextgen-tm-frontend
           pm2 reload nextgen-tm-frontend
           pm2 save
 
