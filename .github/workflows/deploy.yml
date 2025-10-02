@@ -1,0 +1,69 @@
+name: Deploy (nextgen-tm-frontend + nextgen-tm-backend)
+
+on:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: deploy-nextgen-tm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------- Frontend ----------
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Enable corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Install frontend deps
+        run: pnpm -C apps/nextgen-tm-frontend install
+
+      - name: Build frontend
+        env:
+          VITE_NEXTGEN_API: "http://36.255.220.102:8890"
+        run: pnpm -C apps/nextgen-tm-frontend build
+
+      - name: Install PM2 globally
+        run: npm i -g pm2
+
+      # ---------- Backend (Python FastAPI) ----------
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prepare venv and install backend
+        shell: bash
+        run: |
+          python -m venv .venv || true
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -e apps/nextgen-tm-server
+
+      # ---------- Start/Reload services via PM2 ----------
+      - name: Start/Reload backend (uvicorn 8890)
+        shell: bash
+        run: |
+          pm2 describe nextgen-tm-backend >/dev/null 2>&1 || pm2 start "bash -lc 'source .venv/bin/activate && uvicorn nextgen_tm_server.app:app --host 0.0.0.0 --port 8890'" --name nextgen-tm-backend
+          pm2 reload nextgen-tm-backend
+
+      - name: Start/Reload frontend (vite preview 5173)
+        shell: bash
+        run: |
+          pm2 describe nextgen-tm-frontend >/dev/null 2>&1 || pm2 start "pnpm --dir apps/nextgen-tm-frontend run preview -- --host 0.0.0.0" --name nextgen-tm-frontend
+          pm2 reload nextgen-tm-frontend
+          pm2 save
+
+
