@@ -28,7 +28,7 @@ jobs:
           corepack prepare pnpm@latest --activate
 
       - name: Install frontend deps
-        run: pnpm -C apps/nextgen-tm-frontend install
+        run: pnpm -C apps/nextgen-tm-frontend install --no-frozen-lockfile
 
       - name: Build frontend
         env:
