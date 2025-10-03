@@ -27,7 +27,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_NEXTGEN_API: "http://36.255.220.102:8890"
+          VITE_NEXTGEN_API: "https://ap.iotsploit.org"
         run: npm --prefix apps/nextgen-tm-frontend run build
 
       - name: Install PM2 globally
