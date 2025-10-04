@@ -7,8 +7,12 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const [googleUser, setGoogleUser] = useState<{ name?: string; email?: string; picture?: string } | null>(null);
   const [idToken, setIdToken] = useState<string | null>(null);
+  const STORAGE_KEY = "tf_google_user";
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const [loginMenuOpen, setLoginMenuOpen] = useState<boolean>(false);
+  const loginMenuRef = useRef<HTMLDivElement | null>(null);
+  const [loginGoogleHover, setLoginGoogleHover] = useState(false);
 
   function logout() {
     try {
@@ -23,6 +27,7 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
         }
         g.accounts.id.disableAutoSelect?.();
       }
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
     } finally {
       setGoogleUser(null);
       setIdToken(null);
@@ -32,17 +37,32 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
 
   useEffect(() => {
     function handleClickOutside(ev: MouseEvent) {
-      if (ev.target instanceof Node) {
-        if (menuRef.current && !menuRef.current.contains(ev.target)) {
-          setMenuOpen(false);
-        }
-        if (userMenuRef.current && !userMenuRef.current.contains(ev.target)) {
-          setUserMenuOpen(false);
-        }
+      if (!(ev.target instanceof Node)) return;
+      if (menuRef.current && !menuRef.current.contains(ev.target)) {
+        setMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(ev.target)) {
+        setUserMenuOpen(false);
+      }
+      if (loginMenuRef.current && !loginMenuRef.current.contains(ev.target)) {
+        setLoginMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Hydrate from localStorage so refresh does not lose UI state before GIS returns
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { name?: string; email?: string; picture?: string; token?: string };
+      if (saved && (saved.name || saved.email)) {
+        setGoogleUser({ name: saved.name, email: saved.email, picture: saved.picture });
+        if (saved.token) setIdToken(saved.token);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -75,7 +95,10 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
         const picture = payload?.picture ?? "";
         setGoogleUser({ name, email, picture });
         setIdToken(token);
-        setUserMenuOpen(false);
+        setLoginMenuOpen(false);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, email, picture, token }));
+        } catch {}
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(e);
@@ -85,7 +108,7 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
     function init() {
       const g: any = (window as any).google;
       if (!g?.accounts?.id) return;
-      g.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredentialResponse, auto_select: false });
+      g.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredentialResponse, auto_select: true });
       if (googleButtonRef.current) {
         g.accounts.id.renderButton(googleButtonRef.current, {
           type: "standard",
@@ -96,8 +119,8 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
           logo_alignment: "left",
         });
       }
-      // Optionally show prompt on load if desired
-      // g.accounts.id.prompt();
+      // Prompt to restore session if available
+      g.accounts.id.prompt();
     }
 
     const g: any = (window as any).google;
@@ -115,6 +138,25 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
     script.onload = init;
     document.head.appendChild(script);
   }, []);
+
+  // Re-render Google official button when login menu is (re)opened after logout
+  useEffect(() => {
+    const g: any = (window as any).google;
+    if (!googleUser && loginMenuOpen && googleButtonRef.current && g?.accounts?.id) {
+      try {
+        // Clear previous content then render again to avoid duplicates
+        googleButtonRef.current.innerHTML = "";
+        g.accounts.id.renderButton(googleButtonRef.current, {
+          type: "standard",
+          shape: "rectangular",
+          theme: "outline",
+          text: "signin_with",
+          size: "large",
+          logo_alignment: "left",
+        });
+      } catch {}
+    }
+  }, [googleUser, loginMenuOpen]);
   const display = typeof count === "number" ? `${title} (${count})` : title;
   return (
     <div className="app-header" data-testid="app-header">
@@ -137,10 +179,19 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
         </div>
       </div>
       <div className="header-right" data-testid="header_right_section_wrapper">
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div ref={googleButtonRef} />
-          <button className="hit-area-hover" onClick={() => (window as any).google?.accounts?.id?.prompt?.()} title="重新显示登录">Login</button>
-        </div>
+        { !googleUser ? (
+          <div ref={loginMenuRef} className={`dropdown${loginMenuOpen ? " open" : ""}`} data-testid="login-menu">
+            <button className="dropdown-trigger" onClick={() => setLoginMenuOpen(v => !v)}>
+              Login
+              <ChevronDown size={18} />
+            </button>
+            <div className="dropdown-content">
+              <div className="dropdown-item" onMouseEnter={() => setLoginGoogleHover(true)} onMouseLeave={() => setLoginGoogleHover(false)} style={{ backgroundColor: loginGoogleHover ? "#f3f4f6" : undefined, padding: 8 }}>
+                <div ref={googleButtonRef} style={{ display: "inline-block" }} />
+              </div>
+            </div>
+          </div>
+        ) : null }
         <div ref={menuRef} className={`dropdown${menuOpen ? " open" : ""}`} data-testid="ap-menu">
           <button className="dropdown-trigger" onClick={() => setMenuOpen(v => !v)}>
             Options
@@ -166,20 +217,22 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
           <Bell size={16} />
         </button>
         <div className="v-sep" role="none" />
-        <div ref={userMenuRef} className={`dropdown${userMenuOpen ? " open" : ""}`} data-testid="user-menu-dropdown">
-          <button className="user-menu dropdown-trigger" data-testid="user_menu_button" aria-haspopup="menu" onClick={() => setUserMenuOpen(v => !v)}>
-            <div className="avatar" style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", background: "#e5e7eb" }}>
-              {googleUser?.picture ? (
-                <img src={googleUser.picture} alt="avatar" referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-              ) : null}
+        { googleUser ? (
+          <div ref={userMenuRef} className={`dropdown${userMenuOpen ? " open" : ""}`} data-testid="user-menu-dropdown">
+            <button className="user-menu dropdown-trigger" data-testid="user_menu_button" aria-haspopup="menu" onClick={() => setUserMenuOpen(v => !v)}>
+              <div className="avatar" style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", background: "#e5e7eb" }}>
+                {googleUser?.picture ? (
+                  <img src={googleUser.picture} alt="avatar" referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                ) : null}
+              </div>
+              {googleUser?.name ? <span className="user-name" style={{ marginLeft: 8 }} title={googleUser.email || undefined}>{googleUser.name}</span> : null}
+              <ChevronsUpDown size={14} />
+            </button>
+            <div className="dropdown-content">
+              <div className="dropdown-item" onClick={() => logout()}>退出登录</div>
             </div>
-            {googleUser?.name ? <span className="user-name" style={{ marginLeft: 8 }} title={googleUser.email || undefined}>{googleUser.name}</span> : null}
-            <ChevronsUpDown size={14} />
-          </button>
-          <div className="dropdown-content">
-            <div className="dropdown-item" onClick={() => logout()}>退出登录</div>
           </div>
-        </div>
+        ) : null }
       </div>
     </div>
   );
