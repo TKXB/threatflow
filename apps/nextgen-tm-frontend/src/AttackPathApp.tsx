@@ -28,6 +28,7 @@ import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import WelcomeModal from "./components/WelcomeModal";
 import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon } from "lucide-react";
 import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
@@ -126,6 +127,9 @@ export default function AttackPathApp() {
   const [rightWidth, setRightWidth] = useState<number>(360);
   const rightDragRef = useRef<{ startX: number; startW: number } | null>(null);
   const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+    try { return JSON.parse(localStorage.getItem("tf_ap_welcome") || "true"); } catch { return true; }
+  });
   const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const [future, setFuture] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const nodeTypes = useMemo(
@@ -196,6 +200,10 @@ export default function AttackPathApp() {
       setSettingsHydrated(true);
     } catch {}
   }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem("tf_ap_welcome", JSON.stringify(showWelcome)); } catch {}
+  }, [showWelcome]);
 
   useEffect(() => {
     try {
@@ -1137,6 +1145,13 @@ export default function AttackPathApp() {
 
   return (
     <div className="app" style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <WelcomeModal
+        open={showWelcome}
+        onClose={() => setShowWelcome(false)}
+        title="Get started"
+        description="Start with templates showcasing Attack Path modeling and analysis."
+        primaryText="Start"
+      />
       <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
         <div style={{ width: leftWidth, minWidth: 160, maxWidth: 640, flex: `0 0 ${leftWidth}px` }}>
           {SidebarAP}

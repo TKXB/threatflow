@@ -19,6 +19,7 @@ import PropertiesPanel from "./PropertiesPanel";
 import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import ContextMenu from "./components/ContextMenu";
+import WelcomeModal from "./components/WelcomeModal";
 import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
@@ -50,6 +51,9 @@ export default function ThreatModelingApp() {
   const [selectedData, setSelectedData] = useState<Record<string, any> | undefined>(undefined);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; type: "node" | "edge"; id: string } | null>(null);
   const [openSections, setOpenSections] = useState<string[]>([]);
+  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+    try { return JSON.parse(localStorage.getItem("tf_tm_welcome") || "true"); } catch { return true; }
+  });
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -93,6 +97,10 @@ export default function ThreatModelingApp() {
       }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem("tf_tm_welcome", JSON.stringify(showWelcome)); } catch {}
+  }, [showWelcome]);
 
   useEffect(() => {
     try {
@@ -448,6 +456,13 @@ export default function ThreatModelingApp() {
 
   return (
     <div className="app" style={{ height: "100%", display: "flex", overflow: "hidden" }}>
+      <WelcomeModal
+        open={showWelcome}
+        onClose={() => setShowWelcome(false)}
+        title="Get started"
+        description="Start with templates showcasing Threat Modeling palette and connections."
+        primaryText="Start"
+      />
       {SidebarTM}
       <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {Toolbar}
