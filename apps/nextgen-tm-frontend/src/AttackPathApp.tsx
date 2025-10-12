@@ -29,7 +29,7 @@ import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import WelcomeModal from "./components/WelcomeModal";
-import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon } from "lucide-react";
+import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot } from "lucide-react";
 import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
 
@@ -935,6 +935,11 @@ export default function AttackPathApp() {
     });
   }, [nodes, edges]);
 
+  const clearAll = useCallback(() => {
+    setNodes([] as any);
+    setEdges([] as any);
+  }, []);
+
   const deleteSelected = useCallback(() => {
     const selectedNodeIds = new Set((nodes || []).filter((n: any) => (n as any).selected).map((n) => n.id));
     const selectedEdgeIds = new Set((edges || []).filter((e: any) => (e as any).selected).map((e) => e.id));
@@ -1164,7 +1169,7 @@ export default function AttackPathApp() {
             <div className="flow" style={{ height: hasBottom ? "50%" : "100%", position: "relative" }}>
               <div style={{ position: "absolute", right: 12, top: 12, zIndex: 20 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
-                  <button title="Delete" onClick={deleteSelected} style={footerButtonStyle}><Trash size={16} /></button>
+                  <button title="Clear All" onClick={clearAll} style={footerButtonStyle}><Trash size={16} /></button>
                   <button title="Shortcuts" onClick={showShortcuts} style={footerButtonStyle}><Keyboard size={16} /></button>
                   <button title="Undo" onClick={undo} style={footerButtonStyle}><Undo2 size={16} /></button>
                   <button title="Redo" onClick={redo} style={footerButtonStyle}><Redo2 size={16} /></button>
@@ -1173,6 +1178,7 @@ export default function AttackPathApp() {
                   <span style={{ width: 8 }} />
                   <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
                   <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
+                  <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm-tara" } }))} style={footerButtonStyle}><Bot size={16} /></button>
                   <span style={{ width: 8 }} />
                   <button title="Close" onClick={closeDiagram} style={footerButtonStyle}><X size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Close</span></button>
                   <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
