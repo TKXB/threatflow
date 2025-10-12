@@ -18,6 +18,8 @@ from .llm.templates import (
     build_chat_completion_payload,
     build_tara_schema,
     default_tara_user_prompt,
+    build_tm_risks_schema,
+    default_tm_risks_user_prompt,
 )
 
 
@@ -461,6 +463,92 @@ def analysis_tara_llm(req: LlmMethodsRequest) -> dict[str, Any]:
         elapsed = time.perf_counter() - t0
         logger.exception("LLM TARA: failed | elapsed_ms=%d", int(elapsed * 1000))
         return {"ok": False, "error": str(ex), "rows": []}
+
+
+# 新增：ThreatModeling 风险生成（独立于 TARA）
+@app.post("/analysis/tm/llm/risks")
+def analysis_tm_risks_llm(req: LlmMethodsRequest) -> dict[str, Any]:
+    t0 = time.perf_counter()
+    base = analysis_paths(AnalyzeRequest(nodes=req.nodes, edges=req.edges, k=req.k, maxDepth=req.maxDepth))
+    paths = base["paths"]
+
+    llm_base = (req.llm and req.llm.baseUrl) or _get_env("LLM_BASE_URL", "http://127.0.0.1:4000/v1")
+    llm_key = (req.llm and req.llm.apiKey) or _get_env("LLM_API_KEY", "")
+    model = (req.llm and req.llm.model) or _get_env("LLM_MODEL", "gpt-4o-mini")
+
+    schema: dict[str, Any] = build_tm_risks_schema()
+    user_prompt = req.prompt or default_tm_risks_user_prompt()
+
+    payload: dict[str, Any] = build_chat_completion_payload(
+        model=model,
+        nodes=req.nodes,
+        edges=req.edges,
+        paths=paths,
+        user_prompt=user_prompt,
+        schema=schema,
+        temperature=0.2,
+    )
+
+    headers = {"content-type": "application/json"}
+    if llm_key:
+        headers["authorization"] = f"Bearer {llm_key}"
+
+    try:
+        logger.info(
+            "LLM TM Risks: start request | model=%s base=%s nodes=%d edges=%d paths=%d",
+            model,
+            llm_base,
+            len(req.nodes),
+            len(req.edges),
+            len(paths),
+        )
+        r = httpx.post(f"{llm_base}/chat/completions", headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        elapsed = time.perf_counter() - t0
+        data = r.json()
+        content = (data.get("choices") or [{}])[0].get("message", {}).get("content", "{}")
+        parsed = _extract_json(content)
+        risks = parsed.get("risks") or []
+
+        # 为每条风险计算简单分数与数值化严重度（不覆盖 LLM 的文本严重度）
+        id_to_node = {n.id: n for n in req.nodes}
+        for rk in risks:
+            try:
+                node_ids = list(rk.get("nodeIds") or [])
+                total = 0.0
+                for i in range(len(node_ids) - 1):
+                    a = node_ids[i]
+                    b = node_ids[i + 1]
+                    edge = next((e for e in req.edges if e.source == a and e.target == b), None)
+                    if not edge:
+                        continue
+                    I = _impact_for_node(id_to_node.get(b) or Node(id=b))
+                    L = _likelihood_for_edge(edge)
+                    total += I * L
+                rk["score"] = total
+            except Exception:
+                rk["score"] = 0.0
+
+            sev = str(rk.get("severity") or "").lower()
+            sev_num = 1 if sev == "low" else 2 if sev == "medium" else 3 if sev == "high" else 4 if sev == "critical" else 0
+            rk["severityNumeric"] = sev_num
+
+        result = {"ok": True, "risks": risks[: int(req.k)]}
+        logger.info(
+            "LLM TM Risks: success | model=%s elapsed_ms=%d risks=%d",
+            model,
+            int(elapsed * 1000),
+            len(result["risks"]),
+        )
+        return result
+    except httpx.HTTPError as ex:
+        elapsed = time.perf_counter() - t0
+        logger.exception("LLM TM Risks: http error | elapsed_ms=%d", int(elapsed * 1000))
+        return {"ok": False, "error": str(ex), "risks": []}
+    except Exception as ex:
+        elapsed = time.perf_counter() - t0
+        logger.exception("LLM TM Risks: failed | elapsed_ms=%d", int(elapsed * 1000))
+        return {"ok": False, "error": str(ex), "risks": []}
 
 # ===== Plugins aggregation (Entry Points / Assets as standalone JSON files) =====
 

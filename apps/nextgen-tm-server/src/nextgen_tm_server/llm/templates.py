@@ -67,6 +67,84 @@ def default_methods_user_prompt() -> str:
     )
 
 
+def build_tm_risks_schema() -> dict[str, Any]:
+    """返回用于 ThreatModeling 风险输出的 JSON Schema。
+
+    结构：
+    {
+      "risks": [
+        { id?, ruleId?, title, description, severity, confidence?, nodeIds?, references?, evidence? }
+      ]
+    }
+    """
+    return {
+        "name": "ThreatModelingRisks",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "risks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": ["string", "null"]},
+                            "ruleId": {"type": ["string", "null"]},
+                            "title": {"type": "string"},
+                            "description": {"type": "string"},
+                            "severity": {
+                                "type": "string",
+                                "enum": ["low", "medium", "high", "critical"],
+                            },
+                            "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+                            "nodeIds": {"type": "array", "items": {"type": "string"}},
+                            "references": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {"type": "string"},
+                                        "url": {"type": "string"},
+                                    },
+                                    "required": ["title", "url"],
+                                    "additionalProperties": False,
+                                },
+                            },
+                            "evidence": {"type": ["object", "null"]},
+                        },
+                        "required": ["title", "description", "severity"],
+                        "additionalProperties": True,
+                    },
+                }
+            },
+            "required": ["risks"],
+            "additionalProperties": False,
+        },
+    }
+
+
+def default_tm_risks_user_prompt() -> str:
+    """ThreatModeling 风险生成用户提示词。
+
+    符合 LLM-ThreatModeling-TODO 的约束：精度、审计、引用、拒答策略。
+    输出严格遵循 build_tm_risks_schema 所定义的结构，且仅输出 JSON。
+    """
+    return (
+        "你是资深安全架构师，正在对给定的系统模型进行威胁建模。"
+        "请基于提供的 nodes/edges/paths 上下文，按以下严格要求输出 JSON（符合“风险输出模式”）：\n"
+        "1) 仅输出 JSON；不得包含解释性文本；\n"
+        "2) 对每一条风险：\n"
+        "   - 提供 title、description、severity（low/medium/high/critical），可给出 confidence（0..1）；\n"
+        "   - 如能对应到既有规则族，请在 ruleId 中标注；否则置为 \"tm.generic\"；\n"
+        "   - 在 description 中引用具体的模型元素与配置（例如节点 label、propertiesSelected 的具体值）；\n"
+        "   - 填写 nodeIds，优先选择与你推断路径一致的节点序列（可参考 paths）；\n"
+        "   - evidence 中简要给出判断依据（<80 字），不得包含个人数据或敏感明文；\n"
+        "   - references 如需外部链接，请给权威来源（CWE/NIST/OWASP）。\n"
+        "3) 审计与可追溯性：每条风险需能回溯到具体 nodeIds，若无法确定，请降低 confidence 或省略该条；\n"
+        "4) 不确定性与拒答策略：当置信度 < 0.5 或证据不足，谨慎输出或不输出；严禁虚构细节；\n"
+        "5) 仅输出符合给定 JSON Schema 的对象结构。"
+    )
+
+
 def build_tara_schema() -> dict[str, Any]:
     """返回用于 TARA 表格（按截图字段）的 JSON Schema。
 

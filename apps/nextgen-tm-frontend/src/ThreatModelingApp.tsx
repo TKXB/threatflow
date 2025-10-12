@@ -24,7 +24,7 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
-import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer } from "lucide-react";
+import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X } from "lucide-react";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -40,6 +40,23 @@ const nodeStyle: React.CSSProperties = {
   textAlign: "center",
 };
 
+const footerButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  height: 40,
+  padding: "0 10px",
+  borderRadius: 6,
+  border: "1px solid #d1d5db",
+  background: "#ffffff",
+  color: "#111827",
+  fontSize: 12,
+  fontWeight: 500,
+  lineHeight: "20px",
+  boxSizing: "border-box",
+  cursor: "pointer",
+};
+
 export default function ThreatModelingApp() {
   const reactFlowWrapper = useRef<HTMLDivElement | null>(null);
   const [rfInstance, setRfInstance] = useState<any>(null);
@@ -51,6 +68,15 @@ export default function ThreatModelingApp() {
   const [selectedData, setSelectedData] = useState<Record<string, any> | undefined>(undefined);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; type: "node" | "edge"; id: string } | null>(null);
   const [openSections, setOpenSections] = useState<string[]>([]);
+  const [llmBaseUrl, setLlmBaseUrl] = useState<string>("http://127.0.0.1:4000/v1");
+  const [llmApiKey, setLlmApiKey] = useState<string>("");
+  const [llmModel, setLlmModel] = useState<string>("gpt-4o-mini");
+  const [showLlmSettings, setShowLlmSettings] = useState<boolean>(false);
+  const [llmRisks, setLlmRisks] = useState<Array<any> | null>(null);
+  const [risksLoading, setRisksLoading] = useState<boolean>(false);
+  const [acceptedFindings, setAcceptedFindings] = useState<Array<any>>(() => {
+    try { return JSON.parse(localStorage.getItem("tf_tm_findings") || "[]"); } catch { return []; }
+  });
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     try { return JSON.parse(localStorage.getItem("tf_tm_welcome") || "true"); } catch { return true; }
   });
@@ -68,6 +94,10 @@ export default function ThreatModelingApp() {
     nodes: "tf_tm_nodes",
     edges: "tf_tm_edges",
     idseq: "tf_tm_idseq",
+    llmBase: "tf_llm_base_url",
+    llmKey: "tf_llm_api_key",
+    llmModel: "tf_llm_model",
+    findings: "tf_tm_findings",
   } as const;
 
   function safeParse<T>(text: string | null, fallback: T): T {
@@ -95,6 +125,12 @@ export default function ThreatModelingApp() {
         const storedId = safeParse<number | null>(localStorage.getItem(STORAGE_KEYS.idseq), null);
         setIdSeq(storedId ?? computeNextIdSeq(mapped as any));
       }
+      const savedLlmBase = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmBase), null);
+      const savedLlmKey = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmKey), null);
+      const savedLlmModel = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmModel), null);
+      if (savedLlmBase) setLlmBaseUrl(savedLlmBase);
+      if (savedLlmKey) setLlmApiKey(savedLlmKey);
+      if (savedLlmModel) setLlmModel(savedLlmModel);
     } catch {}
   }, []);
 
@@ -107,8 +143,103 @@ export default function ThreatModelingApp() {
       localStorage.setItem(STORAGE_KEYS.nodes, JSON.stringify(nodes));
       localStorage.setItem(STORAGE_KEYS.edges, JSON.stringify(edges));
       localStorage.setItem(STORAGE_KEYS.idseq, JSON.stringify(idSeq));
+      localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
+      localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
+      localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
+      localStorage.setItem(STORAGE_KEYS.findings, JSON.stringify(acceptedFindings));
     } catch {}
-  }, [nodes, edges, idSeq]);
+  }, [nodes, edges, idSeq, llmBaseUrl, llmApiKey, llmModel, acceptedFindings]);
+
+  // API base for server
+  const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
+
+  useEffect(() => {
+    function handler(ev: CustomEvent<{ key: string }>) {
+      const key = ev?.detail?.key;
+      switch (key) {
+        case "llm": {
+          setRisksLoading(true);
+          (async () => {
+            try {
+              const res = await fetch(`${API}/analysis/tm/llm/risks`, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ nodes, edges, k: 20, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }),
+              });
+              const json = await res.json();
+              const risks = (json?.risks || []) as any[];
+              setLlmRisks(risks);
+            } catch (e) {
+              console.error(e);
+            } finally {
+              setRisksLoading(false);
+            }
+          })();
+          break;
+        }
+        case "llm-settings": {
+          setShowLlmSettings(true);
+          break;
+        }
+        case "export-report": {
+          const payload = {
+            modelTitle: "Model",
+            generatedAt: new Date().toISOString(),
+            findings: acceptedFindings,
+          };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "tm-findings.json";
+          a.click();
+          URL.revokeObjectURL(url);
+          break;
+        }
+      }
+    }
+    window.addEventListener("ap-menu", handler as any);
+    return () => window.removeEventListener("ap-menu", handler as any);
+  }, [nodes, edges, API, llmBaseUrl, llmApiKey, llmModel, acceptedFindings]);
+
+  function acceptRisk(r: any) {
+    setAcceptedFindings((prev) => {
+      const id = r.id || `${(r.title || "risk").toString().slice(0, 24).replace(/\s+/g, "-").toLowerCase()}-${Date.now()}`;
+      const next = prev.concat({ ...r, id });
+      return next;
+    });
+  }
+
+  function dismissRisk(idx: number) {
+    setLlmRisks((prev) => {
+      if (!prev) return prev;
+      const copy = prev.slice();
+      copy.splice(idx, 1);
+      return copy;
+    });
+  }
+
+  function exportOtm() {
+    const otm = buildOtmFromGraph(nodes, edges, "Model");
+    const blob = new Blob([JSON.stringify(otm, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "model-otm.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportThreagile() {
+    const yaml = buildThreagileYaml(nodes, edges, "Model");
+    const blob = new Blob([yaml], { type: "text/yaml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "threagile.yaml";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const onConnect = useCallback((conn: Connection) => {
     setEdges((eds) =>
@@ -493,6 +624,14 @@ export default function ThreatModelingApp() {
               <MiniMap />
               <Controls />
             </ReactFlow>
+            {/* Floating button container (top-right) */}
+            <div style={{ position: "absolute", right: 12, top: 12, zIndex: 20 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+                <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
+                <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
+                <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm" } }))} style={footerButtonStyle}><Bot size={16} /></button>
+              </div>
+            </div>
           </div>
           <PropertiesPanel
             kind={selectedKind}
@@ -501,6 +640,99 @@ export default function ThreatModelingApp() {
             onNodeChange={onNodeChangeData}
             onEdgeChange={onEdgeChangeData}
           />
+          {/* LLM Risks panel */}
+          {risksLoading ? (
+            <div style={{ padding: 8, fontSize: 12, color: "#6b7280" }}>LLM Risks loading...</div>
+          ) : null}
+          {(llmRisks && llmRisks.length > 0) ? (
+            <div style={{ borderTop: "1px solid #e5e7eb", background: "#fff" }}>
+              <div style={{ padding: 8, display: "flex", alignItems: "center" }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#111827", fontWeight: 600 }}>
+                  <Bot size={16} />
+                  <span>LLM Risks ({llmRisks.length})</span>
+                </div>
+                <span style={{ flex: 1 }} />
+                <button title="Close" onClick={() => setLlmRisks(null)} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer", fontSize: 12 }}>
+                  <X size={14} /> Close
+                </button>
+              </div>
+              <div style={{ maxHeight: 260, overflow: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb" }}>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Title</th>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Severity</th>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Confidence</th>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Score</th>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Nodes</th>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {llmRisks
+                      .slice()
+                      .sort((a, b) => (b.severityNumeric || 0) - (a.severityNumeric || 0) || (b.score || 0) - (a.score || 0))
+                      .map((r, idx) => (
+                      <tr key={`rk-${idx}`}>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
+                          <div style={{ fontWeight: 600, color: "#111827" }}>{r.title}</div>
+                          <div style={{ color: "#6b7280", marginTop: 2 }}>{r.description}</div>
+                        </td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{String(r.severity || "").toUpperCase()}</td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{typeof r.confidence === "number" ? r.confidence.toFixed(2) : "-"}</td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{typeof r.score === "number" ? r.score.toFixed(2) : "-"}</td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6", maxWidth: 280, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {(r.nodeIds || []).join(" → ")}
+                        </td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
+                          <button onClick={() => acceptRisk(r)} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #10b981", background: "#10b981", color: "#fff", cursor: "pointer", fontSize: 12 }}>Accept</button>
+                          <span style={{ width: 6, display: "inline-block" }} />
+                          <button onClick={() => dismissRisk(idx)} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer", fontSize: 12 }}>Dismiss</button>
+                          <span style={{ width: 6, display: "inline-block" }} />
+                          <button title="Export single" onClick={() => {
+                            const content = JSON.stringify(r, null, 2);
+                            const blob = new Blob([content], { type: "application/json" });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `tm-risk-${(r.id || r.title || "risk").toString().replace(/\s+/g, "-").toLowerCase()}.json`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <DownloadIcon size={14} /> Export
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          {showLlmSettings ? (
+            <div style={{ position: "absolute", right: 16, top: 56, width: 360, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 10px 25px rgba(0,0,0,0.08)", padding: 12, zIndex: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+                <h4 style={{ margin: 0, fontSize: 14 }}>LLM Settings</h4>
+                <span style={{ flex: 1 }} />
+                <button onClick={() => setShowLlmSettings(false)} style={{ fontSize: 12 }}>Close</button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Base URL</span>
+                  <input value={llmBaseUrl} onChange={(e) => setLlmBaseUrl(e.target.value)} placeholder="http://127.0.0.1:4000/v1" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>API Key</span>
+                  <input value={llmApiKey} onChange={(e) => setLlmApiKey(e.target.value)} placeholder="sk-... (stored locally)" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Model</span>
+                  <input value={llmModel} onChange={(e) => setLlmModel(e.target.value)} placeholder="gpt-4o-mini" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                </label>
+              </div>
+            </div>
+          ) : null}
           {ctxMenu && (
             <ContextMenu
               x={ctxMenu.x}
