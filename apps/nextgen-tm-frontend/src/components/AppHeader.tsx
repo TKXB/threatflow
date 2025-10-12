@@ -1,4 +1,5 @@
 import { Workflow, Bell, ChevronsUpDown, ChevronDown } from "lucide-react";
+import { renderWeChatLogin } from "../auth/wechatLogin";
 import { useEffect, useRef, useState } from "react";
 
 export default function AppHeader({ project = "Starter Project", title = "Attack Path", count, mode, onSelectMode, onMenuAction }: { project?: string; title?: string; count?: number; mode: "tm" | "ap"; onSelectMode: (m: "tm" | "ap") => void; onMenuAction?: (key: string) => void }) {
@@ -13,6 +14,8 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
   const [loginMenuOpen, setLoginMenuOpen] = useState<boolean>(false);
   const loginMenuRef = useRef<HTMLDivElement | null>(null);
   const [loginGoogleHover, setLoginGoogleHover] = useState(false);
+  const wechatRef = useRef<HTMLDivElement | null>(null);
+  const [wechatVisible, setWeChatVisible] = useState(false);
 
   function logout() {
     try {
@@ -158,6 +161,8 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
     }
   }, [googleUser, loginMenuOpen]);
   const display = typeof count === "number" ? `${title} (${count})` : title;
+  const WECHAT_APPID = (import.meta as any).env?.VITE_WECHAT_APPID as string | undefined;
+  const WECHAT_REDIRECT_URI = (import.meta as any).env?.VITE_WECHAT_REDIRECT_URI as string | undefined;
   return (
     <div className="app-header" data-testid="app-header">
       <div className="header-left" data-testid="header_left_section_wrapper">
@@ -189,6 +194,24 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
               <div className="dropdown-item" onMouseEnter={() => setLoginGoogleHover(true)} onMouseLeave={() => setLoginGoogleHover(false)} style={{ backgroundColor: loginGoogleHover ? "#f3f4f6" : undefined, padding: 8 }}>
                 <div ref={googleButtonRef} style={{ display: "inline-block" }} />
               </div>
+              <div className="dropdown-sep" />
+              <div className="dropdown-item" onClick={async () => {
+                if (!wechatRef.current) return;
+                if (!WECHAT_APPID || !WECHAT_REDIRECT_URI) {
+                  // eslint-disable-next-line no-console
+                  console.error("Missing VITE_WECHAT_APPID or VITE_WECHAT_REDIRECT_URI");
+                  return;
+                }
+                setWeChatVisible(v => !v);
+                if (!wechatVisible) {
+                  await renderWeChatLogin(wechatRef.current, { appId: WECHAT_APPID, redirectUri: WECHAT_REDIRECT_URI });
+                }
+              }}>使用微信登录</div>
+              {wechatVisible ? (
+                <div className="dropdown-item" style={{ padding: 8 }}>
+                  <div ref={wechatRef} style={{ width: 240, height: 290 }} />
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null }
@@ -198,12 +221,10 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
             <ChevronDown size={18} />
           </button>
           <div className="dropdown-content">
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("clear")}>Clear All</div>
             <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("analyze")}>Analyze & Highlight</div>
             <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("topk")}>Show Top-K (Scores)</div>
             <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("methods")}>Analyze Methods</div>
             <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm")}>LLM Methods</div>
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm-tara")}>LLM TARA</div>
             <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm-settings")}>LLM Settings</div>
             <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("load-demo")}>Load Demo</div>
             <div className="dropdown-sep" />
