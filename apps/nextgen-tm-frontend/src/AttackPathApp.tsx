@@ -371,6 +371,65 @@ export default function AttackPathApp() {
       switch (key) {
         case "clear":
           setNodes([]); setEdges([]); break;
+        case "load-demo": {
+          if (!paletteConfig || !Array.isArray(paletteConfig.sections)) { alert("Palette not loaded. Please import or reload palette."); break; }
+          const findItem = (pred: (it: any) => boolean): any | null => {
+            for (const section of paletteConfig.sections) {
+              for (const it of (section.items || [])) {
+                if (pred(it)) return it;
+              }
+            }
+            return null;
+          };
+          const ethernet = findItem((it) => String((it as any).id || "") === "entry.ethernet")
+            || findItem((it) => String((it as any).type) === "entryPoint" && (String((it as any).technology || "").toLowerCase() === "ethernet" || String((it as any).label || "") === "Ethernet"));
+          const webServer = findItem((it) => String((it as any).id || "") === "asset.web.http")
+            || findItem((it) => String((it as any).type) === "asset" && (String((it as any).technology || "").toLowerCase() === "http" || String((it as any).label || "") === "Web Server"));
+          const database = findItem((it) => String((it as any).id || "") === "asset.database.postgres")
+            || findItem((it) => String((it as any).type) === "asset" && (String((it as any).technology || "").toLowerCase() === "postgres" || String((it as any).label || "") === "Database"));
+
+          if (!ethernet || !webServer || !database) { alert("Required demo items not found in palette."); break; }
+
+          const start = idSeq;
+          const sizeMap: Record<string, { width: number; height: number }> = {
+            actor: { width: 64, height: 64 },
+            entryPoint: { width: 80, height: 80 },
+            process: { width: 120, height: 60 },
+            asset: { width: 100, height: 100 },
+            store: { width: 120, height: 70 },
+            trustBoundary: { width: 260, height: 160 },
+          };
+          const buildNodeFromItem = (id: string, x: number, y: number, item: any) => {
+            const type = String((item as any)?.type || "asset");
+            const sz = sizeMap[type] || { width: 100, height: 60 };
+            const props = (item as any)?.properties || (item as any)?.flags?.properties || undefined;
+            const icon = (item as any)?.icon ? String((item as any).icon) : undefined;
+            const tech = (item as any)?.technology;
+            const label = (item as any)?.label || tech || type;
+            return {
+              id,
+              position: { x, y },
+              data: { label, technology: tech, ...(icon ? { icon } : {}), ...(props ? { properties: props } : {}) },
+              type,
+              width: sz.width,
+              height: sz.height,
+              zIndex: type === "trustBoundary" ? 0 : 1,
+            } as any;
+          };
+
+          const n1 = buildNodeFromItem(`n_${start}`, 160, 160, ethernet);
+          const n2 = buildNodeFromItem(`n_${start + 1}`, 360, 160, webServer);
+          const n3 = buildNodeFromItem(`n_${start + 2}`, 560, 160, database);
+
+          const e1 = { id: `e_${start}_${start + 1}`, source: n1.id, target: n2.id, markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 1.6 } } as any;
+          const e2 = { id: `e_${start + 1}_${start + 2}`, source: n2.id, target: n3.id, markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 1.6 } } as any;
+
+          setNodes([n1, n2, n3]);
+          setEdges([e1, e2]);
+          setIdSeq(start + 3);
+          clearHighlights();
+          break;
+        }
         case "analyze":
           void runMockAnalysisAndHighlight(); break;
         case "topk": {
