@@ -24,7 +24,7 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
-import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X } from "lucide-react";
+import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon } from "lucide-react";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -77,6 +77,10 @@ export default function ThreatModelingApp() {
   const [acceptedFindings, setAcceptedFindings] = useState<Array<any>>(() => {
     try { return JSON.parse(localStorage.getItem("tf_tm_findings") || "[]"); } catch { return []; }
   });
+  const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const [future, setFuture] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const threagileInputRef = useRef<HTMLInputElement | null>(null);
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     try { return JSON.parse(localStorage.getItem("tf_tm_welcome") || "true"); } catch { return true; }
   });
@@ -177,6 +181,26 @@ export default function ThreatModelingApp() {
           })();
           break;
         }
+        case "clear-nodes": {
+          setNodes([]);
+          break;
+        }
+        case "clear-edges": {
+          setEdges([]);
+          break;
+        }
+        case "export-otm": {
+          exportOtm();
+          break;
+        }
+        case "export-threagile": {
+          exportThreagile();
+          break;
+        }
+        case "import-threagile": {
+          try { threagileInputRef.current?.click(); } catch {}
+          break;
+        }
         case "llm-settings": {
           setShowLlmSettings(true);
           break;
@@ -240,6 +264,87 @@ export default function ThreatModelingApp() {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  function onThreagileImportChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    alert("Import Threagile YAML: upload file to /models/import/threagile and hydrate graph");
+    e.currentTarget.value = "";
+  }
+
+  // --- Canvas helpers similar to AttackPathApp ---
+  function pushHistorySnapshot() {
+    try {
+      const snapshot = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) } as { nodes: Node[]; edges: Edge[] };
+      setHistory((h) => [...h, snapshot]);
+      setFuture([]);
+    } catch {}
+  }
+
+  const undo = useCallback(() => {
+    setHistory((h) => {
+      if (h.length === 0) return h;
+      const prev = h[h.length - 1];
+      setFuture((f) => [...f, { nodes: nodes, edges: edges }]);
+      setNodes(prev.nodes as any);
+      setEdges(prev.edges as any);
+      return h.slice(0, -1);
+    });
+  }, [nodes, edges]);
+
+  const redo = useCallback(() => {
+    setFuture((f) => {
+      if (f.length === 0) return f;
+      const next = f[f.length - 1];
+      setHistory((h) => [...h, { nodes: nodes, edges: edges }]);
+      setNodes(next.nodes as any);
+      setEdges(next.edges as any);
+      return f.slice(0, -1);
+    });
+  }, [nodes, edges]);
+
+  const clearAll = useCallback(() => {
+    setNodes([] as any);
+    setEdges([] as any);
+  }, []);
+
+  const closeDiagram = useCallback(() => { setNodes([] as any); setEdges([] as any); }, []);
+
+  const saveModel = useCallback(() => {
+    try {
+      const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
+      const blob = new Blob([JSON.stringify(otm, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "model.save.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  }, [nodes, edges]);
+
+  const showShortcuts = useCallback(() => {
+    try { alert("Shortcuts:\n- Delete: remove selection\n- Right click: context menu\n- Drag between handles: connect nodes"); } catch {}
+  }, []);
+
+  const handleNodesChange = useCallback((changes: any) => {
+    try {
+      if (Array.isArray(changes) && changes.some((c: any) => String(c?.type || "") !== "select")) {
+        pushHistorySnapshot();
+      }
+    } catch {}
+    (onNodesChange as OnNodesChange)(changes);
+    setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
+  }, [onNodesChange, setNodes, nodes, edges]);
+
+  const handleEdgesChange = useCallback((changes: any) => {
+    try {
+      if (Array.isArray(changes) && changes.some((c: any) => String(c?.type || "") !== "select")) {
+        pushHistorySnapshot();
+      }
+    } catch {}
+    (onEdgesChange as OnEdgesChange)(changes);
+  }, [onEdgesChange, nodes, edges]);
 
   const onConnect = useCallback((conn: Connection) => {
     setEdges((eds) =>
@@ -403,57 +508,7 @@ export default function ThreatModelingApp() {
     [openSections, toggleSection, handleSectionKeyDown]
   );
 
-  const Toolbar = useMemo(
-    () => (
-      <div className="toolbar">
-        <button onClick={() => setNodes([])}>Clear Nodes</button>
-        <button onClick={() => setEdges([])}>Clear Edges</button>
-        <button
-          onClick={() => {
-            const otm = buildOtmFromGraph(nodes, edges, "Model");
-            const blob = new Blob([JSON.stringify(otm, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "model-otm.json";
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-        >
-          Export OTM (JSON)
-        </button>
-        <button
-          onClick={() => {
-            const yaml = buildThreagileYaml(nodes, edges, "Model");
-            const blob = new Blob([yaml], { type: "text/yaml" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "threagile.yaml";
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-        >
-          Export Threagile (YAML)
-        </button>
-        <label style={{ marginLeft: 8 }}>
-          <input
-            type="file"
-            accept=".yaml,.yml"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              alert("Import Threagile YAML: upload file to /models/import/threagile and hydrate graph");
-              e.currentTarget.value = "";
-            }}
-          />
-          <span className="toolbar button">Import Threagile (YAML)</span>
-        </label>
-      </div>
-    ),
-    [nodes, edges]
-  );
+  // Toolbar removed: options moved to header dropdown
 
   const onSelectionChange = useCallback((params: { nodes: Node[]; edges: Edge[] }) => {
     if (params.nodes.length === 1) {
@@ -596,9 +651,9 @@ export default function ThreatModelingApp() {
       />
       {SidebarTM}
       <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-        {Toolbar}
+        {/* Toolbar removed: actions available in Options dropdown */}
         <div className="content" style={{ flex: 1, minHeight: 0 }}>
-          <div className="flow" style={{ height: "100%" }}>
+          <div className="flow" style={{ height: "100%", position: "relative" }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -627,11 +682,21 @@ export default function ThreatModelingApp() {
             {/* Floating button container (top-right) */}
             <div style={{ position: "absolute", right: 12, top: 12, zIndex: 20 }}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+                <button title="Clear All" onClick={clearAll} style={footerButtonStyle}><Trash size={16} /></button>
+                <button title="Shortcuts" onClick={showShortcuts} style={footerButtonStyle}><Keyboard size={16} /></button>
+                <button title="Undo" onClick={undo} style={footerButtonStyle}><Undo2 size={16} /></button>
+                <button title="Redo" onClick={redo} style={footerButtonStyle}><Redo2 size={16} /></button>
+                <button title="Toggle Grid" onClick={() => setShowGrid((v) => !v)} style={footerButtonStyle}><GridIcon size={16} /></button>
+                <span style={{ width: 8 }} />
                 <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
                 <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
                 <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm" } }))} style={footerButtonStyle}><Bot size={16} /></button>
+                <span style={{ width: 8 }} />
+                <button title="Close" onClick={closeDiagram} style={footerButtonStyle}><X size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Close</span></button>
+                <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
               </div>
             </div>
+            <input ref={threagileInputRef} type="file" accept=".yaml,.yml" style={{ display: "none" }} onChange={onThreagileImportChange} />
           </div>
           <PropertiesPanel
             kind={selectedKind}

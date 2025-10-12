@@ -221,16 +221,34 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
             <ChevronDown size={18} />
           </button>
           <div className="dropdown-content">
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("analyze")}>Analyze & Highlight</div>
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("topk")}>Show Top-K (Scores)</div>
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("methods")}>Analyze Methods</div>
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm")}>LLM Methods</div>
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm-settings")}>LLM Settings</div>
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("load-demo")}>Load Demo</div>
-            <div className="dropdown-sep" />
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-otm")}>Export OTM</div>
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-threagile")}>Export Threagile</div>
-            <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-report")}>Export Report</div>
+            {mode === "ap" ? (
+              <>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("analyze")}>Analyze & Highlight</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("topk")}>Show Top-K (Scores)</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("methods")}>Analyze Methods</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm")}>LLM Methods</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm-settings")}>LLM Settings</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("load-demo")}>Load Demo</div>
+                <div className="dropdown-sep" />
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-otm")}>Export OTM</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-threagile")}>Export Threagile</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-report")}>Export Report</div>
+              </>
+            ) : (
+              <>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm")}>LLM Risks</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("llm-settings")}>LLM Settings</div>
+                <div className="dropdown-sep" />
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("clear-nodes")}>Clear Nodes</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("clear-edges")}>Clear Edges</div>
+                <div className="dropdown-sep" />
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("import-threagile")}>Import Threagile (YAML)</div>
+                <div className="dropdown-sep" />
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-otm")}>Export OTM</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-threagile")}>Export Threagile</div>
+                <div className="dropdown-item" onClick={() => onMenuAction && onMenuAction("export-report")}>Export Report</div>
+              </>
+            )}
           </div>
         </div>
         <button className="hit-area-hover" aria-label="Notifications" data-testid="notification_button">
