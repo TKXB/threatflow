@@ -16,6 +16,7 @@ import {
   MarkerType,
 } from "@xyflow/react";
 import PropertiesPanel from "./PropertiesPanel";
+import LlmRisksPanel from "./components/LlmRisksPanel";
 import { buildOtmFromGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import ContextMenu from "./components/ContextMenu";
@@ -652,169 +653,121 @@ export default function ThreatModelingApp() {
       {SidebarTM}
       <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {/* Toolbar removed: actions available in Options dropdown */}
-        <div className="content" style={{ flex: 1, minHeight: 0 }}>
-          <div className="flow" style={{ height: "100%", position: "relative" }}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={(changes) => {
-                (onNodesChange as OnNodesChange)(changes);
-                setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
-              }}
-              onEdgesChange={onEdgesChange as OnEdgesChange}
-              onConnect={onConnect}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
-              nodeTypes={nodeTypes}
-              defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 1.6 } }}
-              fitView
-              deleteKeyCode={["Delete"]}
-              onSelectionChange={onSelectionChange}
-              onInit={setRfInstance}
-              onNodeContextMenu={onNodeContext}
-              onEdgeContextMenu={onEdgeContext}
-              onNodeDragStop={onNodeDragStop}
-            >
-              <Background gap={16} color="#f3f4f6" />
-              <MiniMap />
-              <Controls />
-            </ReactFlow>
-            {/* Floating button container (top-right) */}
-            <div style={{ position: "absolute", right: 12, top: 12, zIndex: 20 }}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
-                <button title="Clear All" onClick={clearAll} style={footerButtonStyle}><Trash size={16} /></button>
-                <button title="Shortcuts" onClick={showShortcuts} style={footerButtonStyle}><Keyboard size={16} /></button>
-                <button title="Undo" onClick={undo} style={footerButtonStyle}><Undo2 size={16} /></button>
-                <button title="Redo" onClick={redo} style={footerButtonStyle}><Redo2 size={16} /></button>
-                <button title="Toggle Grid" onClick={() => setShowGrid((v) => !v)} style={footerButtonStyle}><GridIcon size={16} /></button>
-                <span style={{ width: 8 }} />
-                <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
-                <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
-                <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm" } }))} style={footerButtonStyle}><Bot size={16} /></button>
-                <span style={{ width: 8 }} />
-                <button title="Close" onClick={closeDiagram} style={footerButtonStyle}><X size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Close</span></button>
-                <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
-              </div>
-            </div>
-            <input ref={threagileInputRef} type="file" accept=".yaml,.yml" style={{ display: "none" }} onChange={onThreagileImportChange} />
-          </div>
-          <PropertiesPanel
-            kind={selectedKind}
-            nodeType={selectedNodeType}
-            data={selectedData}
-            onNodeChange={onNodeChangeData}
-            onEdgeChange={onEdgeChangeData}
-          />
-          {/* LLM Risks panel */}
-          {risksLoading ? (
-            <div style={{ padding: 8, fontSize: 12, color: "#6b7280" }}>LLM Risks loading...</div>
-          ) : null}
-          {(llmRisks && llmRisks.length > 0) ? (
-            <div style={{ borderTop: "1px solid #e5e7eb", background: "#fff" }}>
-              <div style={{ padding: 8, display: "flex", alignItems: "center" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#111827", fontWeight: 600 }}>
-                  <Bot size={16} />
-                  <span>LLM Risks ({llmRisks.length})</span>
+        <div className="content" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div className="flow" style={{ height: "100%", position: "relative" }}>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={(changes) => {
+                  (onNodesChange as OnNodesChange)(changes);
+                  setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
+                }}
+                onEdgesChange={onEdgesChange as OnEdgesChange}
+                onConnect={onConnect}
+                onDrop={onDrop}
+                onDragOver={onDragOver}
+                nodeTypes={nodeTypes}
+                defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 1.6 } }}
+                fitView
+                deleteKeyCode={["Delete"]}
+                onSelectionChange={onSelectionChange}
+                onInit={setRfInstance}
+                onNodeContextMenu={onNodeContext}
+                onEdgeContextMenu={onEdgeContext}
+                onNodeDragStop={onNodeDragStop}
+              >
+                <Background gap={16} color="#f3f4f6" />
+                <MiniMap />
+                <Controls />
+              </ReactFlow>
+              {/* Floating button container (top-right) */}
+              <div style={{ position: "absolute", right: 12, top: 12, zIndex: 20 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+                  <button title="Clear All" onClick={clearAll} style={footerButtonStyle}><Trash size={16} /></button>
+                  <button title="Shortcuts" onClick={showShortcuts} style={footerButtonStyle}><Keyboard size={16} /></button>
+                  <button title="Undo" onClick={undo} style={footerButtonStyle}><Undo2 size={16} /></button>
+                  <button title="Redo" onClick={redo} style={footerButtonStyle}><Redo2 size={16} /></button>
+                  <button title="Toggle Grid" onClick={() => setShowGrid((v) => !v)} style={footerButtonStyle}><GridIcon size={16} /></button>
+                  <span style={{ width: 8 }} />
+                  <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
+                  <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
+                  <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm" } }))} style={footerButtonStyle}><Bot size={16} /></button>
+                  <span style={{ width: 8 }} />
+                  <button title="Close" onClick={closeDiagram} style={footerButtonStyle}><X size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Close</span></button>
+                  <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
                 </div>
-                <span style={{ flex: 1 }} />
-                <button title="Close" onClick={() => setLlmRisks(null)} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer", fontSize: 12 }}>
-                  <X size={14} /> Close
-                </button>
               </div>
-              <div style={{ maxHeight: 260, overflow: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ background: "#f9fafb" }}>
-                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Title</th>
-                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Severity</th>
-                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Confidence</th>
-                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Score</th>
-                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Nodes</th>
-                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {llmRisks
-                      .slice()
-                      .sort((a, b) => (b.severityNumeric || 0) - (a.severityNumeric || 0) || (b.score || 0) - (a.score || 0))
-                      .map((r, idx) => (
-                      <tr key={`rk-${idx}`}>
-                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
-                          <div style={{ fontWeight: 600, color: "#111827" }}>{r.title}</div>
-                          <div style={{ color: "#6b7280", marginTop: 2 }}>{r.description}</div>
-                        </td>
-                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{String(r.severity || "").toUpperCase()}</td>
-                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{typeof r.confidence === "number" ? r.confidence.toFixed(2) : "-"}</td>
-                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{typeof r.score === "number" ? r.score.toFixed(2) : "-"}</td>
-                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6", maxWidth: 280, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {(r.nodeIds || []).join(" → ")}
-                        </td>
-                        <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
-                          <button onClick={() => acceptRisk(r)} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #10b981", background: "#10b981", color: "#fff", cursor: "pointer", fontSize: 12 }}>Accept</button>
-                          <span style={{ width: 6, display: "inline-block" }} />
-                          <button onClick={() => dismissRisk(idx)} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer", fontSize: 12 }}>Dismiss</button>
-                          <span style={{ width: 6, display: "inline-block" }} />
-                          <button title="Export single" onClick={() => {
-                            const content = JSON.stringify(r, null, 2);
-                            const blob = new Blob([content], { type: "application/json" });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = `tm-risk-${(r.id || r.title || "risk").toString().replace(/\s+/g, "-").toLowerCase()}.json`;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          }} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                            <DownloadIcon size={14} /> Export
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <input ref={threagileInputRef} type="file" accept=".yaml,.yml" style={{ display: "none" }} onChange={onThreagileImportChange} />
             </div>
-          ) : null}
-
-          {showLlmSettings ? (
-            <div style={{ position: "absolute", right: 16, top: 56, width: 360, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 10px 25px rgba(0,0,0,0.08)", padding: 12, zIndex: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-                <h4 style={{ margin: 0, fontSize: 14 }}>LLM Settings</h4>
-                <span style={{ flex: 1 }} />
-                <button onClick={() => setShowLlmSettings(false)} style={{ fontSize: 12 }}>Close</button>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Base URL</span>
-                  <input value={llmBaseUrl} onChange={(e) => setLlmBaseUrl(e.target.value)} placeholder="http://127.0.0.1:4000/v1" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>API Key</span>
-                  <input value={llmApiKey} onChange={(e) => setLlmApiKey(e.target.value)} placeholder="sk-... (stored locally)" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Model</span>
-                  <input value={llmModel} onChange={(e) => setLlmModel(e.target.value)} placeholder="gpt-4o-mini" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
-                </label>
-              </div>
-            </div>
-          ) : null}
-          {ctxMenu && (
-            <ContextMenu
-              x={ctxMenu.x}
-              y={ctxMenu.y}
-              onClose={closeCtx}
-              items={
-                ctxMenu.type === "node"
-                  ? [
-                      { key: "copy", label: "Copy", onClick: () => { duplicateNode(ctxMenu.id); closeCtx(); } },
-                      { key: "delete", label: "Delete", onClick: () => { deleteTarget(ctxMenu); closeCtx(); } },
-                    ]
-                  : [
-                      { key: "delete", label: "Delete", onClick: () => { deleteTarget(ctxMenu); closeCtx(); } },
-                    ]
-              }
+            <LlmRisksPanel
+              risks={llmRisks}
+              loading={risksLoading}
+              onAccept={acceptRisk}
+              onDismiss={(i) => dismissRisk(i)}
+              onExportSingle={(r) => {
+                const content = JSON.stringify(r, null, 2);
+                const blob = new Blob([content], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `tm-risk-${(r.id || r.title || "risk").toString().replace(/\s+/g, "-").toLowerCase()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              onClose={() => setLlmRisks(null)}
             />
-          )}
+
+            {showLlmSettings ? (
+              <div style={{ position: "absolute", right: 16, top: 56, width: 360, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 10px 25px rgba(0,0,0,0.08)", padding: 12, zIndex: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+                  <h4 style={{ margin: 0, fontSize: 14 }}>LLM Settings</h4>
+                  <span style={{ flex: 1 }} />
+                  <button onClick={() => setShowLlmSettings(false)} style={{ fontSize: 12 }}>Close</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>Base URL</span>
+                    <input value={llmBaseUrl} onChange={(e) => setLlmBaseUrl(e.target.value)} placeholder="http://127.0.0.1:4000/v1" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>API Key</span>
+                    <input value={llmApiKey} onChange={(e) => setLlmApiKey(e.target.value)} placeholder="sk-... (stored locally)" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>Model</span>
+                    <input value={llmModel} onChange={(e) => setLlmModel(e.target.value)} placeholder="gpt-4o-mini" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
+                  </label>
+                </div>
+              </div>
+            ) : null}
+            {ctxMenu && (
+              <ContextMenu
+                x={ctxMenu.x}
+                y={ctxMenu.y}
+                onClose={closeCtx}
+                items={
+                  ctxMenu.type === "node"
+                    ? [
+                        { key: "copy", label: "Copy", onClick: () => { duplicateNode(ctxMenu.id); closeCtx(); } },
+                        { key: "delete", label: "Delete", onClick: () => { deleteTarget(ctxMenu); closeCtx(); } },
+                      ]
+                    : [
+                        { key: "delete", label: "Delete", onClick: () => { deleteTarget(ctxMenu); closeCtx(); } },
+                      ]
+                }
+              />
+            )}
+          </div>
+          <div style={{ width: 360, minWidth: 260, flex: "0 0 360px", borderLeft: "1px solid #e5e7eb", background: "#fafafa", overflow: "auto", height: "100%" }}>
+            <PropertiesPanel
+              kind={selectedKind}
+              nodeType={selectedNodeType}
+              data={selectedData}
+              onNodeChange={onNodeChangeData}
+              onEdgeChange={onEdgeChangeData}
+            />
+          </div>
         </div>
       </div>
     </div>
