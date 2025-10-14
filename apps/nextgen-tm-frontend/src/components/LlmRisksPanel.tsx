@@ -19,9 +19,11 @@ type Props = {
   onDismiss: (index: number) => void;
   onExportSingle?: (r: Risk) => void;
   onClose?: () => void;
+  onHoverRisk?: (nodeIds: string[] | null) => void;
+  onFocusRisk?: (nodeIds: string[] | null) => void;
 };
 
-export default function LlmRisksPanel({ risks, loading, onAccept, onDismiss, onExportSingle, onClose }: Props) {
+export default function LlmRisksPanel({ risks, loading, onAccept, onDismiss, onExportSingle, onClose, onHoverRisk, onFocusRisk }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [heightPx, setHeightPx] = useState<number | null>(null);
   const isResizingRef = useRef(false);
@@ -95,7 +97,13 @@ export default function LlmRisksPanel({ risks, loading, onAccept, onDismiss, onE
           </thead>
           <tbody>
             {rows.map((r, idx) => (
-              <tr key={`rk-${idx}`}>
+              <tr
+                key={`rk-${idx}`}
+                onMouseEnter={() => onHoverRisk && onHoverRisk(r.nodeIds || [])}
+                onMouseLeave={() => onHoverRisk && onHoverRisk(null)}
+                onClick={() => onFocusRisk && onFocusRisk(r.nodeIds || [])}
+                style={{ cursor: "pointer" }}
+              >
                 <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
                   <div style={{ fontWeight: 600, color: "#111827" }}>{r.title}</div>
                   <div style={{ color: "#6b7280", marginTop: 2 }}>{r.description}</div>

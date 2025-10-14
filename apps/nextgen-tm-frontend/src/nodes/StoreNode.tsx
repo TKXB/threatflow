@@ -63,9 +63,10 @@ function getAssetTheme(technology?: string) {
   return ASSET_THEMES[technology.toLowerCase()] || ASSET_THEMES.default;
 }
 
-export default memo(function StoreNode({ data }: { data: StoreData }) {
+export default memo(function StoreNode({ data }: { data: StoreData & { __hl?: boolean } }) {
   const IconComponent = getAssetIcon(data.technology);
   const theme = getAssetTheme(data.technology);
+  const hl = !!(data as any).__hl;
 
   return (
     <div
@@ -73,7 +74,7 @@ export default memo(function StoreNode({ data }: { data: StoreData }) {
         width: 80,
         height: 80,
         borderRadius: 12,
-        border: `2px solid ${theme.borderColor}`,
+        border: hl ? "2px solid #2563eb" : `2px solid ${theme.borderColor}`,
         background: theme.bgColor,
         position: "relative",
         display: "flex",
@@ -82,7 +83,7 @@ export default memo(function StoreNode({ data }: { data: StoreData }) {
         flexDirection: "column",
         gap: 4,
         padding: 8,
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        boxShadow: hl ? "0 0 0 4px rgba(37,99,235,0.18)" : "0 2px 4px rgba(0,0,0,0.1)",
       }}
     >
       <IconComponent size={24} color={theme.iconColor} style={{ flexShrink: 0 }} />

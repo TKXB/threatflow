@@ -1,7 +1,8 @@
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 
-export default memo(function ActorNode({ data }: { data: { label: string } }) {
+export default memo(function ActorNode({ data }: { data: { label: string; __hl?: boolean } }) {
+  const hl = !!(data as any).__hl;
   return (
     <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }}>
       <div
@@ -9,12 +10,13 @@ export default memo(function ActorNode({ data }: { data: { label: string } }) {
           width: 64,
           height: 64,
           borderRadius: "50%",
-          border: "2px solid #4b5563",
+          border: hl ? "2px solid #2563eb" : "2px solid #4b5563",
           background: "#fff",
           position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          boxShadow: hl ? "0 0 0 4px rgba(37,99,235,0.18)" : undefined,
         }}
       >
         {/* simple head+body glyph */}

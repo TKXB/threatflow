@@ -85,6 +85,8 @@ export default function ThreatModelingApp() {
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     try { return JSON.parse(localStorage.getItem("tf_tm_welcome") || "true"); } catch { return true; }
   });
+  const [highlightNodeIds, setHighlightNodeIds] = useState<string[]>([]);
+  const [focusNodeIds, setFocusNodeIds] = useState<string[]>([]);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -303,6 +305,59 @@ export default function ThreatModelingApp() {
       return f.slice(0, -1);
     });
   }, [nodes, edges]);
+
+  const computeEdgeIdsForPath = useCallback((ids: string[]) => {
+    const edgeIds: string[] = [];
+    for (let i = 0; i < ids.length - 1; i++) {
+      const a = ids[i];
+      const b = ids[i + 1];
+      const e = edges.find((x) => x.source === a && x.target === b);
+      if (e) edgeIds.push(e.id);
+    }
+    return edgeIds;
+  }, [edges]);
+
+  const applyHighlight = useCallback((nodeIdsAll: string[]) => {
+    const nodeSet = new Set(nodeIdsAll);
+    const edgeIds = computeEdgeIdsForPath(nodeIdsAll);
+    const edgeSet = new Set(edgeIds);
+
+    setNodes((nds) => nds.map((n) => (
+      nodeSet.has(n.id)
+        ? { ...n, data: { ...(n as any).data, __hl: true } }
+        : { ...n, data: (() => { const d: any = { ...(n as any).data }; if (d) delete d.__hl; return d; })() }
+    )));
+
+    setEdges((eds) => eds.map((e) => (
+      edgeSet.has(e.id)
+        ? { ...e, animated: true, style: { ...(e as any).style, stroke: '#2563eb', strokeWidth: 2.5 } }
+        : { ...e, animated: false, style: (() => { const s: any = { ...(e as any).style }; delete s.stroke; delete s.strokeWidth; return s; })() }
+    )));
+  }, [setNodes, setEdges, computeEdgeIdsForPath]);
+
+  useEffect(() => {
+    const nodeIdsAll = Array.from(new Set([...(focusNodeIds || []), ...(highlightNodeIds || [])]));
+    if (nodeIdsAll.length) {
+      applyHighlight(nodeIdsAll);
+    } else {
+      setNodes((nds) => nds.map((n) => ({ ...n, data: (() => { const d: any = { ...(n as any).data }; if (d) delete d.__hl; return d; })() })));
+      setEdges((eds) => eds.map((e) => ({ ...e, animated: false, style: (() => { const s: any = { ...(e as any).style }; delete s.stroke; delete s.strokeWidth; return s; })() })));
+    }
+  }, [highlightNodeIds, focusNodeIds, applyHighlight, setNodes, setEdges]);
+
+  const handleHoverRisk = useCallback((ids: string[] | null) => {
+    setHighlightNodeIds(ids || []);
+  }, []);
+
+  const handleFocusRisk = useCallback((ids: string[] | null) => {
+    setFocusNodeIds(ids || []);
+    if (ids && ids.length && rfInstance) {
+      const nodesToFit = nodes.filter((n) => ids.includes(n.id));
+      if (nodesToFit.length) {
+        rfInstance.fitView({ nodes: nodesToFit, padding: 0.2, duration: 400 });
+      }
+    }
+  }, [rfInstance, nodes]);
 
   const clearAll = useCallback(() => {
     setNodes([] as any);
@@ -715,7 +770,9 @@ export default function ThreatModelingApp() {
                 a.click();
                 URL.revokeObjectURL(url);
               }}
-              onClose={() => setLlmRisks(null)}
+              onHoverRisk={handleHoverRisk}
+              onFocusRisk={handleFocusRisk}
+              onClose={() => { setLlmRisks(null); setHighlightNodeIds([]); setFocusNodeIds([]); }}
             />
 
             {showLlmSettings ? (
