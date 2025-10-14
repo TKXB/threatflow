@@ -29,6 +29,11 @@ import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Bo
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
+// TM palette minimal schema
+type TmPaletteItem = { label: string; type: string; technology?: string };
+type TmPaletteSection = { title: string; items: TmPaletteItem[] };
+type TmPaletteConfig = { sections: TmPaletteSection[] };
+
 const initialNodes: Node<BasicNodeData>[] = [];
 const initialEdges: Edge[] = [];
 
@@ -82,11 +87,14 @@ export default function ThreatModelingApp() {
   const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const [future, setFuture] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const threagileInputRef = useRef<HTMLInputElement | null>(null);
+  const paletteFileInputRef = useRef<HTMLInputElement | null>(null);
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     try { return JSON.parse(localStorage.getItem("tf_tm_welcome") || "true"); } catch { return true; }
   });
   const [highlightNodeIds, setHighlightNodeIds] = useState<string[]>([]);
   const [focusNodeIds, setFocusNodeIds] = useState<string[]>([]);
+  const [paletteConfig, setPaletteConfig] = useState<TmPaletteConfig | null>(null);
+  const [paletteError, setPaletteError] = useState<string | null>(null);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -105,6 +113,7 @@ export default function ThreatModelingApp() {
     llmKey: "tf_llm_api_key",
     llmModel: "tf_llm_model",
     findings: "tf_tm_findings",
+    paletteJson: "tf_tm_palette_json",
   } as const;
 
   function safeParse<T>(text: string | null, fallback: T): T {
@@ -159,6 +168,109 @@ export default function ThreatModelingApp() {
 
   // API base for server
   const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
+
+  // ----- Palette loading chain: LocalStorage > Backend plugins > Default file -----
+  async function loadPaletteFromLocal(): Promise<TmPaletteConfig | null> {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.paletteJson);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.sections)) return parsed as TmPaletteConfig;
+    } catch {}
+    return null;
+  }
+
+  async function loadPaletteFromBackend(): Promise<TmPaletteConfig | null> {
+    try {
+      const res = await fetch(`${API}/api/tm/palette/plugins`, { headers: { "accept": "application/json" } });
+      const json = await res.json();
+      const sections = Array.isArray(json?.sections) ? json.sections : [];
+      if (sections.length > 0) return { sections } as TmPaletteConfig;
+    } catch (e) {
+      console.warn("Failed to load TM backend palette", e);
+    }
+    return null;
+  }
+
+  async function loadDefaultPalette(): Promise<TmPaletteConfig | null> {
+    try {
+      const res = await fetch(`/palette.tm.json?ts=${Date.now()}`);
+      const json = await res.json();
+      if (json && Array.isArray(json.sections)) return json as TmPaletteConfig;
+    } catch (e) {
+      console.warn("Failed to load default palette.tm.json", e);
+    }
+    return null;
+  }
+
+  function mergePalettes(sources: (TmPaletteConfig | null)[]): TmPaletteConfig | null {
+    const sections: TmPaletteSection[] = [];
+    const pushAll = (src?: TmPaletteConfig | null) => {
+      if (!src || !Array.isArray(src.sections)) return;
+      for (const s of src.sections) {
+        const idx = sections.findIndex((x) => x.title === s.title);
+        if (idx === -1) {
+          sections.push({ title: s.title, items: [...(s.items || [])] });
+        } else {
+          const seen = new Set(
+            sections[idx].items.map((it) => `${String((it as any).type)}|${String((it as any).technology || '')}|${String((it as any).label || '')}`)
+          );
+          for (const it of s.items || []) {
+            const key = `${String((it as any).type)}|${String((it as any).technology || '')}|${String((it as any).label || '')}`;
+            if (!seen.has(key)) {
+              sections[idx].items.push(it as any);
+              seen.add(key);
+            }
+          }
+        }
+      }
+    };
+    for (const src of sources) pushAll(src || undefined);
+    return sections.length > 0 ? { sections } : null;
+  }
+
+  async function loadPalette() {
+    setPaletteError(null);
+    const [loc, backend, deflt] = await Promise.all([
+      loadPaletteFromLocal(),
+      loadPaletteFromBackend(),
+      loadDefaultPalette(),
+    ]);
+    const loaded = mergePalettes([deflt, backend, loc]);
+    if (loaded) setPaletteConfig(loaded);
+    else {
+      setPaletteConfig({ sections: [] });
+      setPaletteError("未找到可用的 TM 组件，请导入 JSON。");
+    }
+  }
+
+  useEffect(() => { void loadPalette(); }, []);
+
+  function triggerPaletteImport() { try { paletteFileInputRef.current?.click(); } catch {} }
+
+  function onPaletteFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result || "");
+        const parsed = JSON.parse(text);
+        if (!parsed || !Array.isArray(parsed.sections)) throw new Error("Invalid palette JSON");
+        localStorage.setItem(STORAGE_KEYS.paletteJson, text);
+        setPaletteConfig(parsed as TmPaletteConfig);
+        setPaletteError(null);
+      } catch (err) {
+        setPaletteError("无效的 TM palette JSON");
+      } finally {
+        try { (e.target as HTMLInputElement).value = ""; } catch {}
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function reloadPalette() { await loadPalette(); }
+  async function resetPalette() { try { localStorage.removeItem(STORAGE_KEYS.paletteJson); } catch {}; await loadPalette(); }
 
   useEffect(() => {
     function handler(ev: CustomEvent<{ key: string }>) {
@@ -421,6 +533,7 @@ export default function ThreatModelingApp() {
       event.preventDefault();
       const type = event.dataTransfer.getData("application/tm-node");
       const technology = event.dataTransfer.getData("application/tm-node-tech");
+      const customLabel = event.dataTransfer.getData("application/tm-node-label");
       if (!type) return;
 
       const flowPoint = rfInstance
@@ -432,7 +545,11 @@ export default function ThreatModelingApp() {
       const id = `n_${idSeq}`;
       setIdSeq((v) => v + 1);
 
-      const label = type === "actor" ? (technology || "Actor") : type === "process" ? (technology || "Process") : type === "store" ? "Store" : "Trust Boundary";
+      const label = customLabel
+        || (type === "actor" ? (technology || "Actor")
+        : type === "process" ? (technology || "Process")
+        : type === "store" ? "Store"
+        : "Trust Boundary");
 
       const sizeMap: Record<string, { width: number; height: number }> = {
         actor: { width: 64, height: 64 },
@@ -486,82 +603,55 @@ export default function ThreatModelingApp() {
     () => (
       <div className="sidebar">
         <h3>Palette</h3>
-        <div className="disclosure-section">
-          <div
-            className={`disclosure-header ${openSections.includes("General") ? "open" : ""}`}
-            role="button"
-            tabIndex={0}
-            onClick={() => toggleSection("General")}
-            onKeyDown={(e) => handleSectionKeyDown(e, "General")}
-          >
-            <span className="disclosure-title">General</span>
-            <ChevronRight className="disclosure-chevron" size={16} />
-          </div>
-          <div className={`disclosure-content ${openSections.includes("General") ? "open" : ""}`}>
-            {[
-              { label: "Actor", type: "actor" },
-              { label: "Store", type: "store" },
-              { label: "Trust Boundary", type: "trustBoundary" },
-            ].map((it, i) => (
-              <div
-                key={`gen-${i}-${it.label}`}
-                className="palette-item"
-                data-type={it.type}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("application/tm-node", it.type);
-                }}
-              >
-                {(() => { const Icon = getIconForLabel(it.label); return <span className="pi-icon"><Icon size={16} /></span>; })()}
-                <div className="pi-text">
-                  <div className="pi-label">{it.label}</div>
+        {paletteError && (
+          <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
+        )}
+        {!paletteError && !paletteConfig && (
+          <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
+        )}
+        {paletteConfig && paletteConfig.sections?.map((section, si) => (
+          <div key={`sec-${si}`} className="disclosure-section">
+            <div
+              className={`disclosure-header ${openSections.includes(section.title) ? "open" : ""}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => toggleSection(section.title)}
+              onKeyDown={(e) => handleSectionKeyDown(e, section.title)}
+            >
+              <span className="disclosure-title">{section.title}</span>
+              <ChevronRight className="disclosure-chevron" size={16} />
+            </div>
+            <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
+              {section.items?.map((it, ii) => (
+                <div
+                  key={`item-${si}-${ii}-${it.label}`}
+                  className="palette-item"
+                  data-type={it.type}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/tm-node", it.type);
+                    if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
+                    if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                  }}
+                >
+                  {(() => { const Icon = getIconForLabel(it.label); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                  <div className="pi-text">
+                    <div className="pi-label">{it.label}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="disclosure-section">
-          <div
-            className={`disclosure-header ${openSections.includes("Processes") ? "open" : ""}`}
-            role="button"
-            tabIndex={0}
-            onClick={() => toggleSection("Processes")}
-            onKeyDown={(e) => handleSectionKeyDown(e, "Processes")}
-          >
-            <span className="disclosure-title">Processes</span>
-            <ChevronRight className="disclosure-chevron" size={16} />
-          </div>
-          <div className={`disclosure-content ${openSections.includes("Processes") ? "open" : ""}`}>
-            {[
-              { label: "Web App", tech: "web-application" },
-              { label: "App Server", tech: "application-server" },
-              { label: "Load Balancer", tech: "load-balancer" },
-              { label: "Message Queue", tech: "message-queue" },
-              { label: "API Gateway", tech: "gateway" },
-              { label: "Task/Worker", tech: "task" },
-              { label: "Scheduler", tech: "scheduler" },
-            ].map((it, i) => (
-              <div
-                key={`proc-${i}-${it.label}`}
-                className="palette-item"
-                data-type="process"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("application/tm-node", "process");
-                  e.dataTransfer.setData("application/tm-node-tech", it.tech);
-                }}
-              >
-                {(() => { const Icon = getIconForLabel(it.label); return <span className="pi-icon"><Icon size={16} /></span>; })()}
-                <div className="pi-text">
-                  <div className="pi-label">{it.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+        ))}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
+          <button style={{ ...footerButtonStyle, height: 32 }} onClick={triggerPaletteImport}>Import JSON</button>
+          <button style={{ ...footerButtonStyle, height: 32 }} onClick={() => { void reloadPalette(); }}>Reload</button>
+          <button style={{ ...footerButtonStyle, height: 32 }} onClick={() => { void resetPalette(); }}>Reset Default</button>
+          <input ref={paletteFileInputRef} onChange={onPaletteFileSelected} type="file" accept="application/json" style={{ display: "none" }} />
         </div>
       </div>
     ),
-    [openSections, toggleSection, handleSectionKeyDown]
+    [paletteConfig, paletteError, openSections, toggleSection, handleSectionKeyDown]
   );
 
   // Toolbar removed: options moved to header dropdown
