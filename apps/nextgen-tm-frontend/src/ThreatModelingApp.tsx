@@ -615,48 +615,50 @@ export default function ThreatModelingApp() {
 
   const SidebarTM = useMemo(
     () => (
-      <div className="sidebar">
+      <div className="sidebar" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <h3>Palette</h3>
-        {paletteError && (
-          <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
-        )}
-        {!paletteError && !paletteConfig && (
-          <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
-        )}
-        {paletteConfig && paletteConfig.sections?.map((section, si) => (
-          <div key={`sec-${si}`} className="disclosure-section">
-            <div
-              className={`disclosure-header ${openSections.includes(section.title) ? "open" : ""}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => toggleSection(section.title)}
-              onKeyDown={(e) => handleSectionKeyDown(e, section.title)}
-            >
-              <span className="disclosure-title">{section.title}</span>
-              <ChevronRight className="disclosure-chevron" size={16} />
-            </div>
-            <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
-              {section.items?.map((it, ii) => (
-                <div
-                  key={`item-${si}-${ii}-${it.label}`}
-                  className="palette-item"
-                  data-type={it.type}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("application/tm-node", it.type);
-                    if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
-                    if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
-                  }}
-                >
-                  {(() => { const Icon = getIconForLabel(it.label); return <span className="pi-icon"><Icon size={16} /></span>; })()}
-                  <div className="pi-text">
-                    <div className="pi-label">{it.label}</div>
+        <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          {paletteError && (
+            <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
+          )}
+          {!paletteError && !paletteConfig && (
+            <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
+          )}
+          {paletteConfig && paletteConfig.sections?.map((section, si) => (
+            <div key={`sec-${si}`} className="disclosure-section">
+              <div
+                className={`disclosure-header ${openSections.includes(section.title) ? "open" : ""}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => toggleSection(section.title)}
+                onKeyDown={(e) => handleSectionKeyDown(e, section.title)}
+              >
+                <span className="disclosure-title">{section.title}</span>
+                <ChevronRight className="disclosure-chevron" size={16} />
+              </div>
+              <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
+                {section.items?.map((it, ii) => (
+                  <div
+                    key={`item-${si}-${ii}-${it.label}`}
+                    className="palette-item"
+                    data-type={it.type}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("application/tm-node", it.type);
+                      if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
+                      if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                    }}
+                  >
+                    {(() => { const Icon = getIconForLabel(it.label); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                    <div className="pi-text">
+                      <div className="pi-label">{it.label}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
           <button title="Import JSON" style={{ ...footerButtonStyle, height: 32 }} onClick={triggerPaletteImport}><Upload size={16} /></button>
           <button title="Reload" style={{ ...footerButtonStyle, height: 32 }} onClick={() => { void reloadPalette(); }}><RefreshCw size={16} /></button>
