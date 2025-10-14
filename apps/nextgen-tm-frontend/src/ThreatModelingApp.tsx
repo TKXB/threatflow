@@ -25,7 +25,7 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
-import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon } from "lucide-react";
+import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon, Upload, RefreshCw, RotateCcw } from "lucide-react";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -78,6 +78,7 @@ export default function ThreatModelingApp() {
   const [llmApiKey, setLlmApiKey] = useState<string>("");
   const [llmModel, setLlmModel] = useState<string>("gpt-4o-mini");
   const [showLlmSettings, setShowLlmSettings] = useState<boolean>(false);
+  const [settingsHydrated, setSettingsHydrated] = useState<boolean>(false);
   const [llmRisks, setLlmRisks] = useState<Array<any> | null>(null);
   const [risksLoading, setRisksLoading] = useState<boolean>(false);
   const [acceptedFindings, setAcceptedFindings] = useState<Array<any>>(() => {
@@ -130,6 +131,16 @@ export default function ThreatModelingApp() {
     return Math.max(1, maxNum + 1);
   }
 
+  // 显式保存 LLM 设置（与 AttackPathApp 对齐）
+  function saveLlmSettings() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
+      localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
+      localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
+    } catch {}
+    setShowLlmSettings(false);
+  }
+
   useEffect(() => {
     try {
       const savedNodes = safeParse<Node<any>[]>(localStorage.getItem(STORAGE_KEYS.nodes), []);
@@ -148,6 +159,7 @@ export default function ThreatModelingApp() {
       if (savedLlmKey) setLlmApiKey(savedLlmKey);
       if (savedLlmModel) setLlmModel(savedLlmModel);
     } catch {}
+    setSettingsHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -159,12 +171,14 @@ export default function ThreatModelingApp() {
       localStorage.setItem(STORAGE_KEYS.nodes, JSON.stringify(nodes));
       localStorage.setItem(STORAGE_KEYS.edges, JSON.stringify(edges));
       localStorage.setItem(STORAGE_KEYS.idseq, JSON.stringify(idSeq));
-      localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
-      localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
-      localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
+      if (settingsHydrated) {
+        localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
+        localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
+        localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
+      }
       localStorage.setItem(STORAGE_KEYS.findings, JSON.stringify(acceptedFindings));
     } catch {}
-  }, [nodes, edges, idSeq, llmBaseUrl, llmApiKey, llmModel, acceptedFindings]);
+  }, [nodes, edges, idSeq, llmBaseUrl, llmApiKey, llmModel, acceptedFindings, settingsHydrated]);
 
   // API base for server
   const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
@@ -643,10 +657,10 @@ export default function ThreatModelingApp() {
             </div>
           </div>
         ))}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
-          <button style={{ ...footerButtonStyle, height: 32 }} onClick={triggerPaletteImport}>Import JSON</button>
-          <button style={{ ...footerButtonStyle, height: 32 }} onClick={() => { void reloadPalette(); }}>Reload</button>
-          <button style={{ ...footerButtonStyle, height: 32 }} onClick={() => { void resetPalette(); }}>Reset Default</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
+          <button title="Import JSON" style={{ ...footerButtonStyle, height: 32 }} onClick={triggerPaletteImport}><Upload size={16} /></button>
+          <button title="Reload" style={{ ...footerButtonStyle, height: 32 }} onClick={() => { void reloadPalette(); }}><RefreshCw size={16} /></button>
+          <button title="Reset Default" style={{ ...footerButtonStyle, height: 32 }} onClick={() => { void resetPalette(); }}><RotateCcw size={16} /></button>
           <input ref={paletteFileInputRef} onChange={onPaletteFileSelected} type="file" accept="application/json" style={{ display: "none" }} />
         </div>
       </div>
@@ -885,6 +899,9 @@ export default function ThreatModelingApp() {
                     <span style={{ fontSize: 12, color: "#6b7280" }}>Model</span>
                     <input value={llmModel} onChange={(e) => setLlmModel(e.target.value)} placeholder="gpt-4o-mini" style={{ border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px" }} />
                   </label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    <button onClick={saveLlmSettings}>Save</button>
+                  </div>
                 </div>
               </div>
             ) : null}

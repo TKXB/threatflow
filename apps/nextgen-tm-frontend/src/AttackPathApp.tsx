@@ -29,7 +29,7 @@ import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import WelcomeModal from "./components/WelcomeModal";
-import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot } from "lucide-react";
+import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw } from "lucide-react";
 import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
 
@@ -950,10 +950,10 @@ export default function AttackPathApp() {
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
-          <button style={footerButtonStyle} onClick={triggerImport}>Import JSON</button>
-          <button style={footerButtonStyle} onClick={() => { void reloadPalette(); }}>Reload</button>
-          <button style={footerButtonStyle} onClick={() => { void resetPalette(); }}>Reset Default</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
+          <button title="Import JSON" style={footerButtonStyle} onClick={triggerImport}><Upload size={16} /></button>
+          <button title="Reload" style={footerButtonStyle} onClick={() => { void reloadPalette(); }}><RefreshCw size={16} /></button>
+          <button title="Reset Default" style={footerButtonStyle} onClick={() => { void resetPalette(); }}><RotateCcw size={16} /></button>
           <input ref={fileInputRef} onChange={onFileSelected} type="file" accept="application/json" style={{ display: "none" }} />
         </div>
       </div>
