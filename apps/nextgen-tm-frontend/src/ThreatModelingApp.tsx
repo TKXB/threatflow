@@ -29,6 +29,19 @@ import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Bo
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
+// Edge communication link data schema used by PropertiesPanel and Threagile mapper
+type CommunicationLinkData = {
+  label?: string;
+  protocol?: string;
+  authentication?: string;
+  authorization?: string;
+  usage?: string;
+  vpn?: string | boolean; // yes/no or boolean
+  ip_filtered?: string | boolean; // yes/no or boolean
+  readonly?: string | boolean; // yes/no or boolean
+  data_assets?: string[] | string; // comma-separated string or array
+};
+
 // TM palette minimal schema
 type TmPaletteItem = { label: string; type: string; technology?: string };
 type TmPaletteSection = { title: string; items: TmPaletteItem[] };
@@ -529,6 +542,16 @@ export default function ThreatModelingApp() {
   }, [onEdgesChange, nodes, edges]);
 
   const onConnect = useCallback((conn: Connection) => {
+    const defaultData: CommunicationLinkData = {
+      protocol: "https",
+      authentication: "token",
+      authorization: "none",
+      usage: "business",
+      vpn: "no",
+      ip_filtered: "no",
+      readonly: "no",
+      data_assets: "",
+    };
     setEdges((eds) =>
       addEdge(
         {
@@ -536,6 +559,7 @@ export default function ThreatModelingApp() {
           animated: false,
           markerEnd: { type: MarkerType.ArrowClosed },
           style: { strokeWidth: 1.6 },
+          data: defaultData,
         },
         eds
       )
@@ -817,6 +841,15 @@ export default function ThreatModelingApp() {
         <div className="content" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             <div className="flow" style={{ height: "100%", position: "relative" }}>
+              <style>
+                {`
+                /* Raise edges above nodes so edges inside trust boundary are clickable */
+                .react-flow__edges { z-index: 3 !important; pointer-events: auto; }
+                .react-flow__nodes { z-index: 2 !important; }
+                /* Ensure selected node outlines render atop own background */
+                .react-flow__node.selected { z-index: 4 !important; }
+                `}
+              </style>
               <ReactFlow
                 nodes={nodes}
                 edges={edges}

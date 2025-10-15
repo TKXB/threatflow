@@ -104,13 +104,28 @@ export function buildThreagileYaml(nodes: Node[], edges: Edge[], title = "Model"
     if (!src || !dst) continue;
     const data: any = e.data || {};
     const key = `link-${ssrc}-${sdst}`;
-    (src.communication_links as Record<string, CommLink>)[key] = {
+    const link: CommLink = {
       target: sdst,
       protocol: mapProtocol(data.protocol || "https"),
       authentication: mapAuth(data.authentication || "token"),
-      authorization: "none",
-      usage: "business",
+      authorization: data.authorization || "none",
+      usage: data.usage || "business",
     };
+    // Normalize comma-separated strings to arrays for data assets
+    const toList = (v: any): string[] => {
+      if (!v) return [];
+      if (Array.isArray(v)) return v as string[];
+      return String(v)
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    };
+    const list = toList(data.data_assets);
+    if (list.length) {
+      // 保持与 threagile 接近：单一列表，交由后端在解析阶段决定方向（若需要可按源/目标拆分）
+      (link as any).data_assets = list;
+    }
+    (src.communication_links as Record<string, CommLink>)[key] = link;
   }
 
   // Threagile root doc (minimal)

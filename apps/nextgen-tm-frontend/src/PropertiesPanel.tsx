@@ -383,6 +383,39 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
         onChange={(v) => onEdgeChange({ protocol: v })}
       />
       <RowSelect
+        label="Authentication"
+        value={data?.authentication ?? "token"}
+        options={[
+          { value: "none", label: "none" },
+          { value: "credentials", label: "credentials" },
+          { value: "session-id", label: "session-id" },
+          { value: "token", label: "token" },
+          { value: "client-certificate", label: "client-certificate" },
+          { value: "two-factor", label: "two-factor" },
+          { value: "externalized", label: "externalized" },
+        ]}
+        onChange={(v) => onEdgeChange({ authentication: v })}
+      />
+      <RowSelect
+        label="Authorization"
+        value={data?.authorization ?? "none"}
+        options={[
+          { value: "none", label: "none" },
+          { value: "technical-user", label: "technical-user" },
+          { value: "enduser-identity-propagation", label: "enduser-identity-propagation" },
+        ]}
+        onChange={(v) => onEdgeChange({ authorization: v })}
+      />
+      <RowSelect
+        label="Usage"
+        value={data?.usage ?? "business"}
+        options={[
+          { value: "business", label: "business" },
+          { value: "devops", label: "devops" },
+        ]}
+        onChange={(v) => onEdgeChange({ usage: v })}
+      />
+      <RowSelect
         label="Likelihood (1-5)"
         value={(data?.likelihood ?? "3").toString()}
         options={[
@@ -404,6 +437,33 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
         onChange={(v) => onEdgeChange({ encryptedInTransit: v })}
       />
       <RowSelect
+        label="VPN"
+        value={(data?.vpn ?? "no").toString()}
+        options={[
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+        ]}
+        onChange={(v) => onEdgeChange({ vpn: v })}
+      />
+      <RowSelect
+        label="IP Filtered"
+        value={(data?.ip_filtered ?? "no").toString()}
+        options={[
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+        ]}
+        onChange={(v) => onEdgeChange({ ip_filtered: v })}
+      />
+      <RowSelect
+        label="Readonly"
+        value={(data?.readonly ?? "no").toString()}
+        options={[
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+        ]}
+        onChange={(v) => onEdgeChange({ readonly: v })}
+      />
+      <RowSelect
         label="Public Network"
         value={data?.publicNetwork ?? "no"}
         options={[
@@ -411,6 +471,12 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
           { value: "yes", label: "Yes" },
         ]}
         onChange={(v) => onEdgeChange({ publicNetwork: v })}
+      />
+      <RowInput
+        label="Data Assets (IDs, comma-separated)"
+        value={(Array.isArray(data?.data_assets) ? (data!.data_assets as string[]).join(", ") : (data?.data_assets ?? "")).toString()}
+        placeholder="e.g. customer-contracts, internal-business-data"
+        onChange={(v) => onEdgeChange({ data_assets: v })}
       />
     </div>
   );
