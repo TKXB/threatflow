@@ -46,6 +46,7 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
     { id: "riskValue", header: () => "Risk value", accessorKey: "riskValue", size: 100 },
     { id: "attackVectorParameters", header: () => "Attack vector parameters", accessorKey: "attackVectorParameters", size: 200 },
     { id: "riskImpactFinal", header: () => "Risk Impact (final)", accessorKey: "riskImpactFinal", size: 140 },
+    { id: "cal", header: () => "CAL", accessorKey: "cal", size: 80 },
   ], []);
 
   const taraTable = useReactTable({ data: rows ?? [], columns: taraColumns, getCoreRowModel: getCoreRowModel(), getRowId: (_row, index) => String(index) });

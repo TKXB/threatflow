@@ -220,15 +220,12 @@ def build_tara_schema() -> dict[str, Any]:
                             "logic": {"type": "string", "enum": ["AND", "OR"]},
                             "attackPath": {"type": "string"},
                             "unR155CsmsAnnex5PartA": {"type": "string"},
-                            "attackVectorBasedApproach": {"type": "string"},
-                            "attackFeasibilityRating": {
+                            "attackVectorBasedApproach": {
                                 "type": "string",
-                                "enum": ["Low", "Medium", "High"],
+                                "enum": ["Very Low", "Low", "Medium", "High"],
                             },
-                            "riskImpact": {"type": "string"},
-                            "riskValue": {"type": "number"},
-                            "attackVectorParameters": {"type": "string"},
-                            "riskImpactFinal": {"type": "string"},
+                            # 以下派生列由前端计算，不由 LLM 直接生成：
+                            # attackFeasibilityRating, riskImpact, riskValue, attackVectorParameters, riskImpactFinal, cal
                         },
                         "required": [
                             "damageScenarioNo",
@@ -243,9 +240,7 @@ def build_tara_schema() -> dict[str, Any]:
                             "entryPoint",
                             "logic",
                             "attackPath",
-                            "attackFeasibilityRating",
-                            "riskImpact",
-                            "riskValue",
+                            "attackVectorBasedApproach",
                         ],
                         "additionalProperties": True,
                     },
@@ -263,13 +258,15 @@ def default_tara_user_prompt() -> str:
         "基于给定的系统威胁建模上下文，生成 TARA 表格 rows（JSON）。"
         "每一行需严格包含字段：damageScenarioNo、damageScenario、cybersecurityProperty{C,I,A}、"
         "threatScenarioNo、threatScenario、impactCategory、impactRating、impact、attackPathNo、"
-        "entryPoint、logic、attackPath、unR155CsmsAnnex5PartA、attackVectorBasedApproach、"
-        "attackFeasibilityRating、riskImpact、riskValue、attackVectorParameters、riskImpactFinal。"
+        "entryPoint、logic、attackPath、unR155CsmsAnnex5PartA、attackVectorBasedApproach。"
+        "attackVectorBasedApproach 必须在 Very Low/Low/Medium/High 中选择其一，不得返回 N/A/Unknown/空。"
         "编号格式约束：damageScenarioNo 必须为 DS 后接 3 位数字；threatScenarioNo 必须为 TS 后接 3 位数字；"
         "attackPathNo 必须为 AP 后接 3 位数字（例如 DS001、TS001、AP001）。"
         "其中 C/I/A 为布尔值；impactCategory 取 Safety/Financial/Operational/Privacy；"
         "impactRating 取 Severe/Major/Moderate/Negligible；"
-        "logic 仅能为 AND/OR；feasibility 取 Low/Medium/High。"
+        "logic 仅能为 AND/OR。"
+        "当 entryPoint 的攻击向量类别分别为 Physical/Local/Adjacent/Network 时，"
+        "attackVectorBasedApproach 必须严格对应为 Very Low/Low/Medium/High（区分大小写）。"
         "\n\ndamageScenario 字段要求：围绕 Safety/Financial/Operational/Privacy 中的一个类别进行描述，"
         "其语义需与该行的 impactCategory 一致，但不要求以类别前缀或固定格式开头。"
         "\n\n关于 threatScenario 字段：使用 STRIDE 方法进行分析，且每条 threatScenario 仅允许一个类型（S/T/R/I/D/E 之一）。"
