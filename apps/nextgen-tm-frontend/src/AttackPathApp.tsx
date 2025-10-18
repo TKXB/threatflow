@@ -24,7 +24,7 @@ import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
 import AssetNode from "./nodes/AssetNode";
 import type { ScoredPath } from "./utils/pathAnalysis";
-import { buildOtmFromGraph } from "./utils/otmMapper";
+import { buildOtmFromGraph, applyOtmToGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
@@ -132,6 +132,7 @@ export default function AttackPathApp() {
   });
   const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const [future, setFuture] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const otmImportInputRef = useRef<HTMLInputElement | null>(null);
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -556,6 +557,32 @@ export default function AttackPathApp() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {}
+  }
+
+  function triggerOtmImport() { try { otmImportInputRef.current?.click(); } catch {} }
+
+  function onOtmImportChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result || "");
+        const otm = JSON.parse(text);
+        const { nodes: newNodes, edges: newEdges } = applyOtmToGraph(otm);
+        setNodes((newNodes as any).map((n: any) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })) as any);
+        setEdges(newEdges as any);
+        setIdSeq(computeNextIdSeq(newNodes as any));
+        clearHighlights();
+        setHistory([]);
+        setFuture([]);
+      } catch (err) {
+        try { alert("Invalid OTM JSON file"); } catch {}
+      } finally {
+        try { (e.target as HTMLInputElement).value = ""; } catch {}
+      }
+    };
+    reader.readAsText(file);
   }
 
   function clearHighlights() {
@@ -1235,11 +1262,11 @@ export default function AttackPathApp() {
                   {/** zoom buttons removed **/}
                   <button title="Toggle Grid" onClick={() => setShowGrid((v) => !v)} style={footerButtonStyle}><GridIcon size={16} /></button>
                   <span style={{ width: 8 }} />
+                  <button title="Open" onClick={triggerOtmImport} style={footerButtonStyle}><Upload size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Open</span></button>
                   <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
                   <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
                   <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm-tara" } }))} style={footerButtonStyle}><Bot size={16} /></button>
                   <span style={{ width: 8 }} />
-                  <button title="Close" onClick={closeDiagram} style={footerButtonStyle}><X size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Close</span></button>
                   <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
                 </div>
               </div>
@@ -1265,6 +1292,7 @@ export default function AttackPathApp() {
                 <MiniMap />
                 <Controls />
               </ReactFlow>
+              <input ref={otmImportInputRef} onChange={onOtmImportChange} type="file" accept="application/json,.json" style={{ display: "none" }} />
             </div>
             ); })()}
             {(llmMethods && llmMethods.length > 0) && (

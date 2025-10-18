@@ -1,5 +1,8 @@
 import { useMemo, useRef, useState, useCallback, type MouseEvent as ReactMouseEvent } from "react";
-import { Bot, X, Download as DownloadIcon } from "lucide-react";
+import { Bot, X } from "lucide-react";
+import ThreatEditorDialog from "./ThreatEditorDialog";
+import LlmRiskRow from "./LlmRiskRow";
+import type { ThreatInput, ThreatPriority } from "../types/threats";
 
 type Risk = {
   id?: string;
@@ -15,7 +18,10 @@ type Risk = {
 type Props = {
   risks: Risk[] | null;
   loading?: boolean;
-  onAccept: (r: Risk) => void;
+  // 兼容旧行为：如果未提供新回调，则直接调用旧 onAccept
+  onAccept?: (r: Risk) => void;
+  onCreateThreatFromRisk?: (input: ThreatInput) => Promise<{ threatId: string }>;
+  onUndoAccept?: (sourceRiskId: string, threatId: string) => Promise<void>;
   onDismiss: (index: number) => void;
   onExportSingle?: (r: Risk) => void;
   onClose?: () => void;
@@ -23,14 +29,86 @@ type Props = {
   onFocusRisk?: (nodeIds: string[] | null) => void;
 };
 
-export default function LlmRisksPanel({ risks, loading, onAccept, onDismiss, onExportSingle, onClose, onHoverRisk, onFocusRisk }: Props) {
+export default function LlmRisksPanel({ risks, loading, onAccept, onCreateThreatFromRisk, onUndoAccept, onDismiss, onExportSingle, onClose, onHoverRisk, onFocusRisk }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [heightPx, setHeightPx] = useState<number | null>(null);
   const isResizingRef = useRef(false);
   const startYRef = useRef<number>(0);
   const startHeightRef = useRef<number>(0);
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogInitial, setDialogInitial] = useState<Partial<ThreatInput> & { nodeIds?: string[]; sourceRiskId?: string }>({});
+  const [toast, setToast] = useState<{ message: string; action?: { label: string; onClick: () => void } } | null>(null);
 
   const rows = useMemo(() => (risks || []).slice().sort((a, b) => (b.severityNumeric || 0) - (a.severityNumeric || 0) || (b.score || 0) - (a.score || 0)), [risks]);
+  const [activeTab, setActiveTab] = useState<"suggested" | "accepted" | "dismissed">("suggested");
+  const filteredRows = useMemo(() => {
+    // 暂时没有持久状态区分，先全部显示在“建议”；后续由上层传入状态后生效
+    if (activeTab === "suggested") return rows;
+    return [];
+  }, [rows, activeTab]);
+
+  const mapSeverityToPriority = useCallback((sev?: string, sevNum?: number): ThreatPriority => {
+    const s = (sev || "").toLowerCase();
+    if (s === "critical") return "Critical";
+    if (s === "high") return "High";
+    if (s === "medium" || s === "moderate") return "Medium";
+    if (s === "low") return "Low";
+    if (typeof sevNum === "number") {
+      if (sevNum >= 80) return "Critical";
+      if (sevNum >= 60) return "High";
+      if (sevNum >= 40) return "Medium";
+      if (sevNum > 0) return "Low";
+    }
+    return "TBD";
+  }, []);
+
+  const openThreatDialog = useCallback((r: Risk) => {
+    setDialogInitial({
+      title: r.title || "",
+      description: r.description || "",
+      score: typeof r.score === "number" ? r.score : undefined,
+      priority: mapSeverityToPriority(r.severity, r.severityNumeric),
+      status: "Open",
+      type: "Tampering",
+      nodeIds: r.nodeIds || [],
+      sourceRiskId: r.id,
+    });
+    setShowDialog(true);
+  }, [mapSeverityToPriority]);
+
+  const handleApplyThreat = useCallback(async (input: ThreatInput) => {
+    if (!onCreateThreatFromRisk) {
+      // 无后端回调时，直接关闭并提示，确保用户有反馈
+      setShowDialog(false);
+      setToast({ message: "Accepted (no backend handler)" });
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
+    try {
+      const res = await onCreateThreatFromRisk(input);
+      const threatId = res?.threatId;
+      if (input.sourceRiskId && threatId && onUndoAccept) {
+        const riskId = input.sourceRiskId;
+        setToast({
+          message: "已接受 1 个风险",
+          action: {
+            label: "撤销",
+            onClick: async () => {
+              await onUndoAccept(riskId, threatId);
+              setToast({ message: "已撤销" });
+              setTimeout(() => setToast(null), 2000);
+            },
+          },
+        });
+        setTimeout(() => setToast(null), 5000);
+      } else {
+        setToast({ message: "已接受 1 个风险" });
+        setTimeout(() => setToast(null), 3000);
+      }
+    } finally {
+      setShowDialog(false);
+    }
+  }, [onCreateThreatFromRisk, onUndoAccept]);
 
   const onResizeMouseDownTop = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -74,7 +152,18 @@ export default function LlmRisksPanel({ risks, loading, onAccept, onDismiss, onE
       <div style={{ padding: 8, display: "flex", alignItems: "center" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#111827", fontWeight: 600 }}>
           <Bot size={16} />
-          <span>LLM Risks {rows && rows.length ? `(${rows.length})` : ""}</span>
+          <span>LLM Risks</span>
+        </div>
+        <div style={{ marginLeft: 12, display: "inline-flex", gap: 8 }}>
+          {[
+            { key: "suggested", label: "建议" },
+            { key: "accepted", label: "已接受" },
+            { key: "dismissed", label: "已忽略" },
+          ].map((t) => (
+            <button key={t.key} onClick={() => setActiveTab(t.key as any)} aria-pressed={activeTab === t.key} style={{ height: 28, padding: "0 10px", borderRadius: 6, border: activeTab === t.key ? "1px solid #111827" : "1px solid #d1d5db", background: activeTab === t.key ? "#111827" : "#fff", color: activeTab === t.key ? "#fff" : "#111827", cursor: "pointer", fontSize: 12 }}>
+              {t.label}
+            </button>
+          ))}
         </div>
         <span style={{ flex: 1 }} />
         {onClose && (
@@ -96,38 +185,37 @@ export default function LlmRisksPanel({ risks, loading, onAccept, onDismiss, onE
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, idx) => (
-              <tr
+            {filteredRows.map((r, idx) => (
+              <LlmRiskRow
                 key={`rk-${idx}`}
-                onMouseEnter={() => onHoverRisk && onHoverRisk(r.nodeIds || [])}
-                onMouseLeave={() => onHoverRisk && onHoverRisk(null)}
-                onClick={() => onFocusRisk && onFocusRisk(r.nodeIds || [])}
-                style={{ cursor: "pointer" }}
-              >
-                <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
-                  <div style={{ fontWeight: 600, color: "#111827" }}>{r.title}</div>
-                  <div style={{ color: "#6b7280", marginTop: 2 }}>{r.description}</div>
-                </td>
-                <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{String(r.severity || "").toUpperCase()}</td>
-                <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{typeof r.confidence === "number" ? r.confidence.toFixed(2) : "-"}</td>
-                <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{typeof r.score === "number" ? r.score.toFixed(2) : "-"}</td>
-                <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6", maxWidth: 280, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {(r.nodeIds || []).join(" → ")}
-                </td>
-                <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
-                  <button onClick={() => onAccept(r)} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #10b981", background: "#10b981", color: "#fff", cursor: "pointer", fontSize: 12 }}>Accept</button>
-                  <span style={{ width: 6, display: "inline-block" }} />
-                  <button onClick={() => onDismiss(idx)} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer", fontSize: 12 }}>Dismiss</button>
-                  <span style={{ width: 6, display: "inline-block" }} />
-                  <button title="Export single" onClick={() => onExportSingle && onExportSingle(r)} style={{ height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                    <DownloadIcon size={14} /> Export
-                  </button>
-                </td>
-              </tr>
+                risk={r}
+                index={idx}
+                onAccept={openThreatDialog}
+                onDismiss={onDismiss}
+                onExportSingle={onExportSingle}
+                onHoverRisk={onHoverRisk}
+                onFocusRisk={onFocusRisk}
+              />
             ))}
           </tbody>
         </table>
       </div>
+      {showDialog && (
+        <ThreatEditorDialog
+          open={showDialog}
+          initial={dialogInitial}
+          onCancel={() => setShowDialog(false)}
+          onApply={handleApplyThreat}
+        />
+      )}
+      {toast && (
+        <div aria-live="polite" style={{ position: "fixed", bottom: 16, left: 16, background: "#111827", color: "#fff", padding: "10px 12px", borderRadius: 8, display: "flex", alignItems: "center", gap: 12, zIndex: 60 }}>
+          <span>{toast.message}</span>
+          {toast.action && (
+            <button onClick={toast.action.onClick} style={{ height: 28, padding: "0 10px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", color: "#111827", cursor: "pointer", fontSize: 12 }}>{toast.action.label}</button>
+          )}
+        </div>
+      )}
       {loading && (
         <div aria-live="polite" role="status" style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 12 }}>

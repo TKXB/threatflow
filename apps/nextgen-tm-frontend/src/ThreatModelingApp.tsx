@@ -17,7 +17,7 @@ import {
 } from "@xyflow/react";
 import PropertiesPanel from "./PropertiesPanel";
 import LlmRisksPanel from "./components/LlmRisksPanel";
-import { buildOtmFromGraph } from "./utils/otmMapper";
+import { buildOtmFromGraph, applyOtmToGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
 import ContextMenu from "./components/ContextMenu";
 import WelcomeModal from "./components/WelcomeModal";
@@ -102,6 +102,7 @@ export default function ThreatModelingApp() {
   const [future, setFuture] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const threagileInputRef = useRef<HTMLInputElement | null>(null);
   const paletteFileInputRef = useRef<HTMLInputElement | null>(null);
+  const otmImportInputRef = useRef<HTMLInputElement | null>(null);
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     try { return JSON.parse(localStorage.getItem("tf_tm_welcome") || "true"); } catch { return true; }
   });
@@ -405,6 +406,31 @@ export default function ThreatModelingApp() {
     a.download = "threagile.yaml";
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function triggerOtmImport() { try { otmImportInputRef.current?.click(); } catch {} }
+
+  function onOtmImportChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result || "");
+        const otm = JSON.parse(text);
+        const { nodes: newNodes, edges: newEdges } = applyOtmToGraph(otm);
+        setNodes((newNodes as any).map((n: any) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })) as any);
+        setEdges(newEdges as any);
+        setIdSeq(computeNextIdSeq(newNodes as any));
+        setHistory([]);
+        setFuture([]);
+      } catch (err) {
+        try { alert("无效的 OTM JSON 文件"); } catch {}
+      } finally {
+        try { (e.target as HTMLInputElement).value = ""; } catch {}
+      }
+    };
+    reader.readAsText(file);
   }
 
   function onThreagileImportChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -884,15 +910,16 @@ export default function ThreatModelingApp() {
                   <button title="Redo" onClick={redo} style={footerButtonStyle}><Redo2 size={16} /></button>
                   <button title="Toggle Grid" onClick={() => setShowGrid((v) => !v)} style={footerButtonStyle}><GridIcon size={16} /></button>
                   <span style={{ width: 8 }} />
+                  <button title="Open" onClick={triggerOtmImport} style={footerButtonStyle}><Upload size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Open</span></button>
                   <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
                   <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
                   <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm" } }))} style={footerButtonStyle}><Bot size={16} /></button>
                   <span style={{ width: 8 }} />
-                  <button title="Close" onClick={closeDiagram} style={footerButtonStyle}><X size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Close</span></button>
                   <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
                 </div>
               </div>
               <input ref={threagileInputRef} type="file" accept=".yaml,.yml" style={{ display: "none" }} onChange={onThreagileImportChange} />
+              <input ref={otmImportInputRef} type="file" accept="application/json,.json" style={{ display: "none" }} onChange={onOtmImportChange} />
             </div>
             <LlmRisksPanel
               risks={llmRisks}
