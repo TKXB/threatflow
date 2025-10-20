@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { FaShieldAlt } from 'react-icons/fa';
 
@@ -14,9 +14,10 @@ const THEME = {
 
 export default memo(function AssetNode({ data }: { data: AssetData }) {
   const theme = THEME;
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div style={{ width: 96, height: 96, position: "relative" }}>
         <svg width="96" height="96" viewBox="0 0 96 96" style={{ position: "absolute", inset: 0 }}>
           <rect x="3" y="3" width="90" height="90" fill="transparent" stroke={theme.borderColor} strokeWidth={2} />
@@ -30,11 +31,11 @@ export default memo(function AssetNode({ data }: { data: AssetData }) {
           <div style={{ fontSize: 11, color: theme.textColor, fontWeight: 700, textAlign: "center", lineHeight: 1.2, wordBreak: "break-word", maxWidth: "100%" }}>{data.label}</div>
         </div>
       </div>
-      {/* 四边各一个连接点。左/上为 target，右/下为 source。*/}
-      <Handle id="left" type="target" position={Position.Left} style={{ left: 5, zIndex: 10 }} />
-      <Handle id="top" type="target" position={Position.Top} style={{ top: 3, zIndex: 10 }} />
-      <Handle id="right" type="source" position={Position.Right} style={{ right: 5, zIndex: 10 }} />
-      <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: 7, zIndex: 10 }} />
+      {/* 四边各一个连接点。左/上为 target，右/下为 source。默认隐藏，悬停时显示。*/}
+      <Handle id="left" type="target" position={Position.Left} style={{ left: 5, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="top" type="target" position={Position.Top} style={{ top: 3, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ right: 5, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: 7, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
     </div>
   );
 });
