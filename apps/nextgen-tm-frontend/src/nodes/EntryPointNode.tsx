@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { 
   FaWifi, 
@@ -113,6 +113,7 @@ function getEntryPointTheme(technology?: string) {
 export default memo(function EntryPointNode({ data }: { data: EntryPointData }) {
   const IconComponent = getEntryPointIcon(data.technology);
   const theme = getEntryPointTheme(data.technology);
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div
@@ -131,6 +132,8 @@ export default memo(function EntryPointNode({ data }: { data: EntryPointData }) 
         padding: 8,
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <IconComponent size={24} color={theme.iconColor} style={{ flexShrink: 0 }} />
       <div
@@ -146,8 +149,11 @@ export default memo(function EntryPointNode({ data }: { data: EntryPointData }) 
       >
         {data.label}
       </div>
-      {/* Entry points typically only have outgoing connections */}
-      <Handle type="source" position={Position.Right} />
+      {/* 四边各一个连接点。默认隐藏，悬停显示。左/上为 target，右/下为 source。*/}
+      <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="top" type="target" position={Position.Top} style={{ top: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
     </div>
   );
 });
