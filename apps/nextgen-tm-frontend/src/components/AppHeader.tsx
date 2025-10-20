@@ -167,8 +167,8 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
     <div className="app-header" data-testid="app-header">
       <div className="header-left" data-testid="header_left_section_wrapper">
         <div className="header-tabs">
-          <button type="button" className={`tab-btn${mode === "tm" ? " active" : ""}`} onClick={() => onSelectMode("tm")}>威胁建模</button>
-          <button type="button" className={`tab-btn${mode === "ap" ? " active" : ""}`} onClick={() => onSelectMode("ap")}>攻击路径</button>
+          <button type="button" className={`tab-btn${mode === "tm" ? " active" : ""}`} onClick={() => onSelectMode("tm")}>Threat Modeling</button>
+          <button type="button" className={`tab-btn${mode === "ap" ? " active" : ""}`} onClick={() => onSelectMode("ap")}>Attack Path</button>
         </div>
       </div>
       <div className="header-center">
