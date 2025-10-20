@@ -121,7 +121,7 @@ export default memo(function EntryPointNode({ data }: { data: EntryPointData }) 
         height: 80,
         borderRadius: 12,
         border: `2px solid ${theme.borderColor}`,
-        background: theme.bgColor,
+        background: "transparent",
         position: "relative",
         display: "flex",
         alignItems: "center",

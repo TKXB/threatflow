@@ -75,7 +75,7 @@ export default memo(function StoreNode({ data }: { data: StoreData & { __hl?: bo
         height: 80,
         borderRadius: 12,
         border: hl ? "2px solid #2563eb" : `2px solid ${theme.borderColor}`,
-        background: theme.bgColor,
+        background: "transparent",
         position: "relative",
         display: "flex",
         alignItems: "center",
@@ -86,19 +86,21 @@ export default memo(function StoreNode({ data }: { data: StoreData & { __hl?: bo
         boxShadow: hl ? "0 0 0 4px rgba(37,99,235,0.18)" : "0 2px 4px rgba(0,0,0,0.1)",
       }}
     >
-      <IconComponent size={24} color={theme.iconColor} style={{ flexShrink: 0 }} />
-      <div
-        style={{
-          fontSize: 10,
-          color: theme.textColor,
-          fontWeight: 600,
-          textAlign: "center",
-          lineHeight: 1.2,
-          wordBreak: "break-word",
-          maxWidth: "100%",
-        }}
-      >
-        {data.label}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+        <IconComponent size={24} color={theme.iconColor} style={{ flexShrink: 0 }} />
+        <div
+          style={{
+            fontSize: 10,
+            color: theme.textColor,
+            fontWeight: 600,
+            textAlign: "center",
+            lineHeight: 1.2,
+            wordBreak: "break-word",
+            maxWidth: "100%",
+          }}
+        >
+          {data.label}
+        </div>
       </div>
       {/* Assets typically have both incoming and outgoing connections */}
       <Handle type="target" position={Position.Left} />

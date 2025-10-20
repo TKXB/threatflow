@@ -19,17 +19,17 @@ export default memo(function AssetNode({ data }: { data: AssetData }) {
     <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }}>
       <div style={{ width: 96, height: 96, position: "relative" }}>
         <svg width="96" height="96" viewBox="0 0 96 96" style={{ position: "absolute", inset: 0 }}>
-          <rect x="3" y="3" width="90" height="90" fill={theme.bgColor} stroke={theme.borderColor} strokeWidth={2} />
+          <rect x="3" y="3" width="90" height="90" fill="transparent" stroke={theme.borderColor} strokeWidth={2} />
         </svg>
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 6, padding: 6 }}>
           {data.icon ? (
             <span style={{ fontSize: 24, lineHeight: 1 }}>{data.icon}</span>
           ) : (
             <FaShieldAlt size={28} color={theme.iconColor} style={{ flexShrink: 0 }} />
           )}
+          <div style={{ fontSize: 11, color: theme.textColor, fontWeight: 700, textAlign: "center", lineHeight: 1.2, wordBreak: "break-word", maxWidth: "100%" }}>{data.label}</div>
         </div>
       </div>
-      <div style={{ fontSize: 11, color: theme.textColor, fontWeight: 700, background: "#fff" }}>{data.label}</div>
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
     </div>
