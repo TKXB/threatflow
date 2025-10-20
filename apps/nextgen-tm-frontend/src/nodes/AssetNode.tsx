@@ -30,8 +30,11 @@ export default memo(function AssetNode({ data }: { data: AssetData }) {
           <div style={{ fontSize: 11, color: theme.textColor, fontWeight: 700, textAlign: "center", lineHeight: 1.2, wordBreak: "break-word", maxWidth: "100%" }}>{data.label}</div>
         </div>
       </div>
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      {/* 四边各一个连接点。左/上为 target，右/下为 source。*/}
+      <Handle id="left" type="target" position={Position.Left} style={{ left: 5, zIndex: 10 }} />
+      <Handle id="top" type="target" position={Position.Top} style={{ top: 3, zIndex: 10 }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ right: 5, zIndex: 10 }} />
+      <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: 7, zIndex: 10 }} />
     </div>
   );
 });
