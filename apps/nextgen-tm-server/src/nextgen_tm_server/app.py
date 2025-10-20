@@ -616,6 +616,9 @@ def _validate_item(raw: dict[str, Any]) -> dict[str, Any] | None:
         out["flags"] = raw.get("flags")
     if raw.get("priority") is not None:
         out["priority"] = raw.get("priority")
+    # pass-through optional asset domain for frontend grouping
+    if raw.get("domain") is not None:
+        out["domain"] = raw.get("domain")
     if raw.get("beta") is not None:
         out["beta"] = raw.get("beta")
     if raw.get("legacy") is not None:

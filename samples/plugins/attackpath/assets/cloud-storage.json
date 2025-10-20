@@ -4,6 +4,7 @@
   "icon": "☁️",
   "type": "asset",
   "technology": "s3",
-  "priority": 90
+  "priority": 90,
+  "domain": "Cloud"
 }
 

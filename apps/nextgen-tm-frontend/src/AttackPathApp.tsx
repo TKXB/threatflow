@@ -45,6 +45,7 @@ type PaletteItem = {
   technology?: string;
   flags?: Record<string, any>;
   priority?: number;
+  domain?: string;
   beta?: boolean;
   legacy?: boolean;
   properties?: Array<{ key: string; label: string; type: string; options?: { value: string; label: string }[]; default?: string }>;
@@ -324,6 +325,26 @@ export default function AttackPathApp() {
   async function resetPalette() { try { localStorage.removeItem(STORAGE_KEYS.paletteJson); } catch {}; await loadPalette(); }
 
   useEffect(() => { void loadPalette(); }, []);
+
+  // 默认展开“Assets”与其 domain 子分组
+  useEffect(() => {
+    if (!paletteConfig) return;
+    try {
+      const next = new Set(openSections);
+      const sections = Array.isArray(paletteConfig.sections) ? paletteConfig.sections : [];
+      for (const s of sections) {
+        if (s.title === "Assets") {
+          next.add(s.title);
+          const items = Array.isArray(s.items) ? s.items : [];
+          const domainKeys = new Set<string>();
+          for (const it of items) domainKeys.add(String((it as any)?.domain || "Other"));
+          for (const gk of domainKeys) next.add(`${s.title}::${gk}`);
+        }
+      }
+      const arr = Array.from(next);
+      if (arr.length !== openSections.length) setOpenSections(arr);
+    } catch {}
+  }, [paletteConfig]);
 
   // Install global listeners while dragging resizers
   useEffect(() => {
@@ -955,27 +976,94 @@ export default function AttackPathApp() {
                 <ChevronRight className="disclosure-chevron" size={16} />
               </div>
               <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
-                {section.items?.map((it, ii) => (
-                  <div
-                    key={`item-${si}-${ii}-${it.label}`}
-                    className="palette-item"
-                    data-type={it.type}
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData("application/tm-node", it.type);
-                      if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
-                      if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
-                      if ((it as any).icon) e.dataTransfer.setData("application/tm-node-icon", String((it as any).icon));
-                      if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
-                      if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
-                    }}
-                  >
-                    {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
-                    <div className="pi-text">
-                      <div className="pi-label">{it.label}</div>
-                    </div>
-                  </div>
-                ))}
+                {section.title === "Assets"
+                  ? (() => {
+                      const items = Array.isArray(section.items) ? section.items : [];
+                      const grouped: Record<string, PaletteItem[]> = {};
+                      for (const it of items) {
+                        const key = String(((it as any)?.type === "asset" ? (it as any)?.domain : undefined) || "Other");
+                        if (!grouped[key]) grouped[key] = [];
+                        grouped[key].push(it);
+                      }
+                      const order = ["Automotive", "Cloud", "Mobile"] as const;
+                      const keys = Object.keys(grouped);
+                      const known = keys.filter((k) => order.includes(k as any)).sort((a, b) => order.indexOf(a as any) - order.indexOf(b as any));
+                      const others = keys.filter((k) => !order.includes(k as any)).sort();
+                      const sortedKeys = [...known, ...others];
+
+                      const renderItem = (it: PaletteItem, keyStr: string) => (
+                        <div
+                          key={keyStr}
+                          className="palette-item"
+                          data-type={it.type}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("application/tm-node", it.type);
+                            if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
+                            if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                            if ((it as any).icon) e.dataTransfer.setData("application/tm-node-icon", String((it as any).icon));
+                            if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
+                            if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
+                          }}
+                        >
+                          {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                          <div className="pi-text">
+                            <div className="pi-label">{it.label}</div>
+                          </div>
+                        </div>
+                      );
+
+                      return sortedKeys.map((gk) => {
+                        const groupKey = `${section.title}::${gk}`;
+                        const groupItems = grouped[gk]
+                          .slice()
+                          .sort((a, b) => {
+                            const pa = typeof a.priority === "number" ? a.priority as number : 1e9;
+                            const pb = typeof b.priority === "number" ? b.priority as number : 1e9;
+                            if (pa !== pb) return pa - pb;
+                            return String(a.label || "").localeCompare(String(b.label || ""));
+                          });
+                        return (
+                          <div key={`grp-${gk}`} className="disclosure-section" style={{ marginLeft: 10 }}>
+                            <div
+                              className={`disclosure-header ${openSections.includes(groupKey) ? "open" : ""}`}
+                              style={{ paddingLeft: 8 }}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => toggleSection(groupKey)}
+                              onKeyDown={(e) => handleSectionKeyDown(e, groupKey)}
+                            >
+                              <span className="disclosure-title">{gk}</span>
+                              <ChevronRight className="disclosure-chevron" size={16} />
+                            </div>
+                            <div className={`disclosure-content ${openSections.includes(groupKey) ? "open" : ""}`} style={{ marginLeft: 10 }}>
+                              {groupItems.map((it, ii) => renderItem(it, `item-${si}-${gk}-${ii}-${it.label}`))}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()
+                  : section.items?.map((it, ii) => (
+                      <div
+                        key={`item-${si}-${ii}-${it.label}`}
+                        className="palette-item"
+                        data-type={it.type}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("application/tm-node", it.type);
+                          if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
+                          if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                          if ((it as any).icon) e.dataTransfer.setData("application/tm-node-icon", String((it as any).icon));
+                          if (it.flags) e.dataTransfer.setData("application/tm-node-flags", JSON.stringify(it.flags));
+                          if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
+                        }}
+                      >
+                        {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                        <div className="pi-text">
+                          <div className="pi-label">{it.label}</div>
+                        </div>
+                      </div>
+                    ))}
               </div>
             </div>
           ))}

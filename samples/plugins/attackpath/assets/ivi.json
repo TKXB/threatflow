@@ -4,6 +4,7 @@
   "icon": "🎛️",
   "type": "asset",
   "technology": "ivi",
-  "priority": 75
+  "priority": 75,
+  "domain": "Automotive"
 }
 

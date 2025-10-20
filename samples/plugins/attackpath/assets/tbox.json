@@ -1,0 +1,11 @@
+{
+  "id": "asset.auto.tbox",
+  "label": "Tbox",
+  "icon": "📡",
+  "type": "asset",
+  "technology": "tbox",
+  "priority": 65,
+  "domain": "Automotive"
+}
+
+

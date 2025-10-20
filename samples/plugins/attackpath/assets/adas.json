@@ -4,6 +4,7 @@
   "icon": "🧠",
   "type": "asset",
   "technology": "adas",
-  "priority": 70
+  "priority": 70,
+  "domain": "Automotive"
 }
 
