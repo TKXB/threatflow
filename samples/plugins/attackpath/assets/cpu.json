@@ -1,7 +1,7 @@
 {
   "id": "asset.chips.cpu",
   "label": "CPU",
-  "icon": "🧠",
+  "icon": "/icons/cpu.svg",
   "type": "asset",
   "technology": "cpu",
   "priority": 20,

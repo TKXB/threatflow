@@ -1,7 +1,7 @@
 {
   "id": "asset.sd.card",
   "label": "SD Card",
-  "icon": "💾",
+  "icon": "/icons/sd-card.svg",
   "type": "asset",
   "technology": "sd-card",
   "priority": 50

@@ -568,6 +568,22 @@ export default function AttackPathApp() {
     return Box;
   }
 
+  function renderPaletteIcon(it: PaletteItem) {
+    const raw = (it as any).icon as string | undefined;
+    const trimmed = typeof raw === "string" ? raw.trim() : "";
+    const isSvgMarkup = trimmed.startsWith("<svg");
+    const isUrlLike = /^(?:\.|\/|https?:\/\/|data:)/i.test(trimmed);
+    const isSvgUrl = isUrlLike && (/\.svg($|\?)/i.test(trimmed) || /^data:\s*image\/svg\+xml/i.test(trimmed));
+    if (trimmed && (isSvgMarkup || isSvgUrl)) {
+      if (isSvgMarkup) {
+        return <span className="pi-icon" style={{ width: 16, height: 16, display: "inline-flex" }} dangerouslySetInnerHTML={{ __html: trimmed }} />;
+      }
+      return <span className="pi-icon"><img src={trimmed} alt="icon" width={16} height={16} style={{ display: "block", objectFit: "contain" }} /></span>;
+    }
+    const Icon = getIconForItem(it);
+    return <span className="pi-icon"><Icon size={16} /></span>;
+  }
+
   function download(filename: string, content: string, mime: string) {
     try {
       const blob = new Blob([content], { type: mime });
@@ -1006,7 +1022,7 @@ export default function AttackPathApp() {
                             if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
                           }}
                         >
-                          {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                          {renderPaletteIcon(it)}
                           <div className="pi-text">
                             <div className="pi-label">{it.label}</div>
                           </div>
@@ -1058,7 +1074,7 @@ export default function AttackPathApp() {
                           if (it.properties) e.dataTransfer.setData("application/tm-node-props", JSON.stringify(it.properties));
                         }}
                       >
-                        {(() => { const Icon = getIconForItem(it); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                        {renderPaletteIcon(it)}
                         <div className="pi-text">
                           <div className="pi-label">{it.label}</div>
                         </div>

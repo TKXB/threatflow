@@ -16,6 +16,38 @@ export default memo(function AssetNode({ data }: { data: AssetData }) {
   const theme = THEME;
   const [isHovered, setIsHovered] = useState(false);
 
+  function renderIcon(icon?: string) {
+    if (!icon) return null;
+    const trimmed = String(icon).trim();
+    const isSvgMarkup = trimmed.startsWith("<svg");
+    const isUrlLike = /^(?:\.|\/|https?:\/\/|data:)/i.test(trimmed);
+    const isSvgUrl = isUrlLike && (/\.svg($|\?)/i.test(trimmed) || /^data:\s*image\/svg\+xml/i.test(trimmed));
+
+    if (isSvgMarkup) {
+      // Render inline SVG markup
+      return (
+        <span
+          style={{ display: "inline-flex", width: 28, height: 28 }}
+          dangerouslySetInnerHTML={{ __html: trimmed }}
+        />
+      );
+    }
+    if (isSvgUrl) {
+      // Render SVG from URL or data URI
+      return (
+        <img
+          src={trimmed}
+          alt="icon"
+          width={28}
+          height={28}
+          style={{ display: "block", objectFit: "contain" }}
+        />
+      );
+    }
+    // Fallback: treat as emoji or short text
+    return <span style={{ fontSize: 24, lineHeight: 1 }}>{trimmed}</span>;
+  }
+
   return (
     <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div style={{ width: 96, height: 96, position: "relative" }}>
@@ -24,7 +56,7 @@ export default memo(function AssetNode({ data }: { data: AssetData }) {
         </svg>
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 6, padding: 6 }}>
           {data.icon ? (
-            <span style={{ fontSize: 24, lineHeight: 1 }}>{data.icon}</span>
+            renderIcon(data.icon)
           ) : (
             <FaShieldAlt size={28} color={theme.iconColor} style={{ flexShrink: 0 }} />
           )}
