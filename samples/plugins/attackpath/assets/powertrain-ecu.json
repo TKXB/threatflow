@@ -1,0 +1,11 @@
+{
+  "id": "asset.auto.pcm",
+  "label": "Powertrain Control ECU",
+  "icon": "🧩",
+  "type": "asset",
+  "technology": "powertrain-control-ecu",
+  "priority": 66,
+  "domain": "Automotive"
+}
+
+

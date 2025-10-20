@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.ufs",
+  "label": "UFS",
+  "icon": "💿",
+  "type": "asset",
+  "technology": "ufs",
+  "priority": 41,
+  "domain": "Chips"
+}
+
+

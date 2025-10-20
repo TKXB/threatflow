@@ -4,6 +4,7 @@
   "icon": "🛡️",
   "type": "asset",
   "technology": "gateway",
-  "priority": 60
+  "priority": 60,
+  "domain": "Automotive"
 }
 

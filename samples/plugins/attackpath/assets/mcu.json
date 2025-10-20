@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.mcu",
+  "label": "MCU",
+  "icon": "🔌",
+  "type": "asset",
+  "technology": "mcu",
+  "priority": 25,
+  "domain": "Chips"
+}
+
+

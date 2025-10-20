@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.emmc",
+  "label": "eMMC",
+  "icon": "💽",
+  "type": "asset",
+  "technology": "emmc",
+  "priority": 40,
+  "domain": "Chips"
+}
+
+

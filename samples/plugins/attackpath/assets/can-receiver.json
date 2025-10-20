@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.can-receiver",
+  "label": "CAN Receiver",
+  "icon": "🛰️",
+  "type": "asset",
+  "technology": "can-receiver",
+  "priority": 50,
+  "domain": "Chips"
+}
+
+

@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.spi-flash",
+  "label": "SPI Flash",
+  "icon": "📀",
+  "type": "asset",
+  "technology": "spi-flash",
+  "priority": 42,
+  "domain": "Chips"
+}
+
+

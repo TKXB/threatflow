@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.eeprom",
+  "label": "EEPROM",
+  "icon": "💾",
+  "type": "asset",
+  "technology": "eeprom",
+  "priority": 45,
+  "domain": "Chips"
+}
+
+

@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.pmic",
+  "label": "PMIC",
+  "icon": "🔋",
+  "type": "asset",
+  "technology": "pmic",
+  "priority": 52,
+  "domain": "Chips"
+}
+
+

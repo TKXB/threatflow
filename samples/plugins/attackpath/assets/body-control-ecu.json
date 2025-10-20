@@ -1,0 +1,11 @@
+{
+  "id": "asset.auto.bcm",
+  "label": "Body Control ECU",
+  "icon": "🚗",
+  "type": "asset",
+  "technology": "body-control-ecu",
+  "priority": 68,
+  "domain": "Automotive"
+}
+
+

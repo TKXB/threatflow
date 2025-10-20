@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.cpu",
+  "label": "CPU",
+  "icon": "🧠",
+  "type": "asset",
+  "technology": "cpu",
+  "priority": 20,
+  "domain": "Chips"
+}
+
+

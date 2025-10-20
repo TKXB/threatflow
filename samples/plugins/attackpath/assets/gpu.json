@@ -1,0 +1,11 @@
+{
+  "id": "asset.chips.gpu",
+  "label": "GPU",
+  "icon": "🎮",
+  "type": "asset",
+  "technology": "gpu",
+  "priority": 22,
+  "domain": "Chips"
+}
+
+
