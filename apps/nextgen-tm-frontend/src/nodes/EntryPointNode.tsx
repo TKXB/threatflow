@@ -150,8 +150,8 @@ export default memo(function EntryPointNode({ data }: { data: EntryPointData }) 
         {data.label}
       </div>
       {/* 四边各一个连接点。默认隐藏，悬停显示。左/上为 target，右/下为 source。*/}
-      <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
-      <Handle id="top" type="target" position={Position.Top} style={{ top: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="left" type="source" position={Position.Left} style={{ left: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="top" type="source" position={Position.Top} style={{ top: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
       <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
       <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
     </div>
