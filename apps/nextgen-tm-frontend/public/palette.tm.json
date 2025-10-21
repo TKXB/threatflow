@@ -13,7 +13,7 @@
       "items": [
         { "label": "Web App", "type": "process", "technology": "web-application" },
         { "label": "App Server", "type": "process", "technology": "application-server" },
-        { "label": "Message Queue", "type": "process", "technology": "message-queue" }
+        { "label": "Message Queue", "type": "process", "technology": "message-queue", "icon": "/icons/queue.svg" }
       ]
     }
   ]

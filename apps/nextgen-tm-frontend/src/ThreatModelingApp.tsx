@@ -43,7 +43,7 @@ type CommunicationLinkData = {
 };
 
 // TM palette minimal schema
-type TmPaletteItem = { label: string; type: string; technology?: string };
+type TmPaletteItem = { label: string; type: string; technology?: string; icon?: string };
 type TmPaletteSection = { title: string; items: TmPaletteItem[] };
 type TmPaletteConfig = { sections: TmPaletteSection[] };
 
@@ -598,6 +598,7 @@ export default function ThreatModelingApp() {
       const type = event.dataTransfer.getData("application/tm-node");
       const technology = event.dataTransfer.getData("application/tm-node-tech");
       const customLabel = event.dataTransfer.getData("application/tm-node-label");
+      const iconFromDrag = event.dataTransfer.getData("application/tm-node-icon");
       if (!type) return;
 
       const flowPoint = rfInstance
@@ -626,7 +627,7 @@ export default function ThreatModelingApp() {
 
       setNodes((nds) => [
         ...nds,
-        { id, position, data: { label, technology: technology || undefined }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 },
+        { id, position, data: { label, technology: technology || undefined, ...(iconFromDrag ? { icon: iconFromDrag } : {}) }, type: (type as any), width: sz.width, height: sz.height, zIndex: type === "trustBoundary" ? 0 : 1 },
       ]);
     },
     [idSeq, rfInstance]
@@ -663,6 +664,22 @@ export default function ThreatModelingApp() {
     return Box;
   }
 
+  function renderPaletteIcon(it: TmPaletteItem) {
+    const raw = (it as any).icon as string | undefined;
+    const trimmed = typeof raw === "string" ? raw.trim() : "";
+    const isSvgMarkup = trimmed.startsWith("<svg");
+    const isUrlLike = /^(?:\.|\/|https?:\/\/|data:)/i.test(trimmed);
+    const isSvgUrl = isUrlLike && (/\.svg($|\?)/i.test(trimmed) || /^data:\s*image\/svg\+xml/i.test(trimmed));
+    if (trimmed && (isSvgMarkup || isSvgUrl)) {
+      if (isSvgMarkup) {
+        return <span className="pi-icon" style={{ width: 16, height: 16, display: "inline-flex" }} dangerouslySetInnerHTML={{ __html: trimmed }} />;
+      }
+      return <span className="pi-icon"><img src={trimmed} alt="icon" width={16} height={16} style={{ display: "block", objectFit: "contain" }} /></span>;
+    }
+    const Icon = getIconForLabel(it.label);
+    return <span className="pi-icon"><Icon size={16} /></span>;
+  }
+
   const SidebarTM = useMemo(
     () => (
       <div className="sidebar" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -697,9 +714,10 @@ export default function ThreatModelingApp() {
                       e.dataTransfer.setData("application/tm-node", it.type);
                       if (it.technology) e.dataTransfer.setData("application/tm-node-tech", String(it.technology));
                       if (it.label) e.dataTransfer.setData("application/tm-node-label", String(it.label));
+                      if ((it as any).icon) e.dataTransfer.setData("application/tm-node-icon", String((it as any).icon));
                     }}
                   >
-                    {(() => { const Icon = getIconForLabel(it.label); return <span className="pi-icon"><Icon size={16} /></span>; })()}
+                    {renderPaletteIcon(it)}
                     <div className="pi-text">
                       <div className="pi-label">{it.label}</div>
                     </div>
