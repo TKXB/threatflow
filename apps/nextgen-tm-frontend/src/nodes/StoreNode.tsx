@@ -103,8 +103,8 @@ export default memo(function StoreNode({ data }: { data: StoreData & { __hl?: bo
         </div>
       </div>
       {/* Assets typically have both incoming and outgoing connections */}
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10 }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10 }} />
     </div>
   );
 });

@@ -65,8 +65,8 @@ export default memo(function ProcessNode({ data }: { data: ProcessData & { __hl?
           </div>
         </div>
       </div>
-      <Handle type="target" position={Position.Left} style={{ left: -37, zIndex: 10 }} />
-      <Handle type="source" position={Position.Right} style={{ right: -37, zIndex: 10 }} />
+      <Handle id="left" type="target" position={Position.Left} style={{ left: -37, zIndex: 10 }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ right: -37, zIndex: 10 }} />
     </div>
   );
 });

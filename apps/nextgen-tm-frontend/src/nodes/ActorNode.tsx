@@ -1,8 +1,7 @@
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 
-export default memo(function ActorNode({ data }: { data: { label: string; __hl?: boolean } }) {
-  const hl = !!(data as any).__hl;
+export default memo(function ActorNode({ data }: { data: { label: string } }) {
   return (
     <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }}>
       <div
@@ -10,13 +9,12 @@ export default memo(function ActorNode({ data }: { data: { label: string; __hl?:
           width: 64,
           height: 64,
           borderRadius: "50%",
-          border: hl ? "2px solid #2563eb" : "2px solid #4b5563",
+          border: "2px solid #4b5563",
           background: "#fff",
           position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: hl ? "0 0 0 4px rgba(37,99,235,0.18)" : undefined,
         }}
       >
         {/* simple head+body glyph */}
@@ -26,8 +24,8 @@ export default memo(function ActorNode({ data }: { data: { label: string; __hl?:
         </svg>
       </div>
       <div style={{ fontSize: 12, color: "#374151", background: "#fff" }}>{data.label}</div>
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10 }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10 }} />
     </div>
   );
 });
