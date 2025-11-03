@@ -45,14 +45,11 @@ export default memo(function ProcessNode({ data }: { data: ProcessData & { __hl?
   const theme = THEME;
   return (
     <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }}>
-      <div style={{ width: 200, height: 60, position: "relative" }}>
+      <div style={{ width: 160, minHeight: 70, position: "relative", display: "flex", alignItems: "center", borderRadius: 8, border: `2px solid ${theme.borderColor}`, background: "#fff", padding: "12px" }}>
         {hl ? (
-          <div style={{ position: "absolute", inset: 0, filter: "blur(6px)", borderRadius: 8, boxShadow: "0 0 0 4px rgba(37,99,235,0.22)" }} />
+          <div style={{ position: "absolute", inset: 0, filter: "blur(6px)", borderRadius: 8, boxShadow: "0 0 0 4px rgba(37,99,235,0.22)", pointerEvents: "none" }} />
         ) : null}
-        <svg width="200" height="60" viewBox="0 0 200 60" style={{ position: "absolute", inset: 0 }}>
-          <rect x="3" y="3" width="194" height="54" rx="8" fill="#fff" stroke={theme.borderColor} strokeWidth={2} />
-        </svg>
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0 }}>
             {data.icon ? (
               renderIcon(data.icon)
@@ -60,13 +57,13 @@ export default memo(function ProcessNode({ data }: { data: ProcessData & { __hl?
               <FaServer size={22} color={theme.iconColor} />
             )}
           </div>
-          <div style={{ fontSize: 12, color: theme.textColor, fontWeight: 700, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+          <div style={{ fontSize: 12, color: theme.textColor, fontWeight: 700, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word", lineHeight: 1.35, flex: 1, minWidth: 0 }}>
             {data.label}
           </div>
         </div>
+        <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10, top: "50%" }} />
+        <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10, top: "50%" }} />
       </div>
-      <Handle id="left" type="target" position={Position.Left} style={{ left: -37, zIndex: 10 }} />
-      <Handle id="right" type="source" position={Position.Right} style={{ right: -37, zIndex: 10 }} />
     </div>
   );
 });
