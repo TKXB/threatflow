@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import {
   FaDatabase,
@@ -67,6 +67,7 @@ export default memo(function StoreNode({ data }: { data: StoreData & { __hl?: bo
   const IconComponent = getAssetIcon(data.technology);
   const theme = getAssetTheme(data.technology);
   const hl = !!(data as any).__hl;
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div
@@ -85,6 +86,8 @@ export default memo(function StoreNode({ data }: { data: StoreData & { __hl?: bo
         padding: 8,
         boxShadow: hl ? "0 0 0 4px rgba(37,99,235,0.18)" : "0 2px 4px rgba(0,0,0,0.1)",
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
         <IconComponent size={24} color={theme.iconColor} style={{ flexShrink: 0 }} />
@@ -103,8 +106,8 @@ export default memo(function StoreNode({ data }: { data: StoreData & { __hl?: bo
         </div>
       </div>
       {/* Assets typically have both incoming and outgoing connections */}
-      <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10 }} />
-      <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10 }} />
+      <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
     </div>
   );
 });

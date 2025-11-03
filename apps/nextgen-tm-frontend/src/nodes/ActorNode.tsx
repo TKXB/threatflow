@@ -1,9 +1,10 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 
 export default memo(function ActorNode({ data }: { data: { label: string } }) {
+  const [isHovered, setIsHovered] = useState(false);
   return (
-    <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div
         style={{
           width: 64,
@@ -24,8 +25,8 @@ export default memo(function ActorNode({ data }: { data: { label: string } }) {
         </svg>
       </div>
       <div style={{ fontSize: 12, color: "#374151", background: "#fff" }}>{data.label}</div>
-      <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10 }} />
-      <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10 }} />
+      <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
     </div>
   );
 });
