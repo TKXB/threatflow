@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { FaServer } from 'react-icons/fa';
 
@@ -43,8 +43,9 @@ function renderIcon(icon?: string) {
 export default memo(function ProcessNode({ data }: { data: ProcessData & { __hl?: boolean } }) {
   const hl = !!(data as any).__hl;
   const theme = THEME;
+  const [isHovered, setIsHovered] = useState(false);
   return (
-    <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div style={{ width: 160, minHeight: 70, position: "relative", display: "flex", alignItems: "center", borderRadius: 8, border: `2px solid ${theme.borderColor}`, background: "#fff", padding: "12px" }}>
         {hl ? (
           <div style={{ position: "absolute", inset: 0, filter: "blur(6px)", borderRadius: 8, boxShadow: "0 0 0 4px rgba(37,99,235,0.22)", pointerEvents: "none" }} />
@@ -61,8 +62,8 @@ export default memo(function ProcessNode({ data }: { data: ProcessData & { __hl?
             {data.label}
           </div>
         </div>
-        <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10, top: "50%" }} />
-        <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10, top: "50%" }} />
+        <Handle id="left" type="target" position={Position.Left} style={{ left: -1, zIndex: 10, top: "50%", opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+        <Handle id="right" type="source" position={Position.Right} style={{ right: -1, zIndex: 10, top: "50%", opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
       </div>
     </div>
   );
