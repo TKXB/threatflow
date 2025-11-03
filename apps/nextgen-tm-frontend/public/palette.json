@@ -1,12 +1,4 @@
 {
-  "sections": [
-    {
-      "title": "Logic",
-      "items": [
-        { "label": "AND", "icon": "⚬", "type": "process", "technology": "and-gate" },
-        { "label": "OR", "icon": "⚬", "type": "process", "technology": "or-gate" }
-      ]
-    }
-  ]
+  "sections": []
 }
 
