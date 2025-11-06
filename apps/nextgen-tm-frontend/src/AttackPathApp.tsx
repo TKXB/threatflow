@@ -29,7 +29,7 @@ import { buildThreagileYaml } from "./utils/threagileMapper";
 import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import WelcomeModal from "./components/WelcomeModal";
-import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw } from "lucide-react";
+import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, Minimize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw } from "lucide-react";
 import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
 import { applyTaraDerivations } from "./utils/taraCalc";
@@ -1474,16 +1474,16 @@ export default function AttackPathApp() {
               />
             )}
             {showTaraFullscreen && (
-              <div style={{ position: "fixed", inset: 0, background: "#ffffff", zIndex: 50, display: "flex", flexDirection: "column" }}>
+              <div style={{ position: "fixed", inset: 0, background: "#ffffff", zIndex: 2000, display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", alignItems: "center", padding: 12, borderBottom: "1px solid #e5e7eb" }}>
                   <div style={{ fontSize: 14, fontWeight: 700 }}>LLM TARA Table (Full Screen)</div>
                   <span style={{ flex: 1 }} />
                   <button onClick={() => setShowTaraFullscreen(false)} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                    <X size={16} />
-                    Close
+                    <Minimize2 size={16} />
+                    Exit Full Screen
                   </button>
                 </div>
-                <div style={{ flex: 1, overflow: "auto", padding: 12 }}>
+                <div style={{ flex: 1, overflow: "auto", padding: 12, position: "relative" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       {taraTable.getHeaderGroups().map((hg) => (
