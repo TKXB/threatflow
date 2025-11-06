@@ -1,0 +1,11 @@
+{
+  "id": "entry.android.adb",
+  "label": "ADB",
+  "icon": "🔌",
+  "type": "entryPoint",
+  "technology": "adb",
+  "priority": 70,
+  "domain": "Android"
+}
+
+

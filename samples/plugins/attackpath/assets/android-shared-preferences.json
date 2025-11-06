@@ -1,0 +1,18 @@
+{
+  "id": "asset.android.shared-preferences",
+  "label": "SharedPreferences",
+  "icon": "🧾",
+  "type": "asset",
+  "technology": "shared-preferences",
+  "priority": 25,
+  "domain": "Android",
+  "flags": {
+    "properties": [
+      { "key": "encrypted", "label": "Encrypted", "type": "select", "options": [ { "value": "no", "label": "No" }, { "value": "yes", "label": "Yes" } ], "default": "no" },
+      { "key": "backupEnabled", "label": "Backup Enabled", "type": "select", "options": [ { "value": "no", "label": "No" }, { "value": "yes", "label": "Yes" } ], "default": "no" },
+      { "key": "fileName", "label": "File Name", "type": "input", "default": "prefs.xml" }
+    ]
+  }
+}
+
+
