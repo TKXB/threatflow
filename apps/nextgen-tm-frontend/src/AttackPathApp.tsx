@@ -1372,7 +1372,13 @@ export default function AttackPathApp() {
                   <button title="Open" onClick={triggerOtmImport} style={footerButtonStyle}><Upload size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Open</span></button>
                   <button title="Export OTM" onClick={exportOtm} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>OTM</span></button>
                   <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
-                  <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm-tara" } }))} style={footerButtonStyle}><Bot size={16} /></button>
+                  <button
+                    title="AI"
+                    onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm-tara" } }))}
+                    style={{ ...footerButtonStyle, background: "linear-gradient(135deg, #a855f7 0%, #22d3ee 100%)", color: "#ffffff", borderColor: "#2563eb" }}
+                  >
+                    <Bot size={16} />
+                  </button>
                   <span style={{ width: 8 }} />
                   <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
                 </div>
