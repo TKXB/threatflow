@@ -5,6 +5,80 @@ import json
 import re
 
 
+# UN-R155 CSMS Annex 5 Part A — 枚举清单（按用户提供原文逐项收录）
+UNR155_CSMS_ANNEX5_PARTA_OPTIONS: list[str] = [
+    "01.1: Abuse of privileges by staff (insider attack)",
+    "01.2: Unauthorised internet access to the server (enabled for example by backdoors, unpatched system software vulnerabilities, SQL attacks or other means)",
+    "01.3: Unauthorised physical access to the server (conducted by for example USB sticks or other media connecting to the server)",
+    "02.1: Unauthorised physical access to the server (conducted by for example USB sticks or other media connecting to the server)",
+    "03.1: Abuse of privileges by staff (insider attack)",
+    "03.2: Loss of information in the cloud. Sensitive data may be lost due to attacks or accidents when data is stored by third-party cloud service providers",
+    "03.3: Unauthorised internet access to the server (enabled for example by backdoors, unpatched system software vulnerabilities, SQL attacks or other means)",
+    "03.4: Unauthorised physical access to the server (conducted by for example USB sticks or other media connecting to the server)",
+    "03.5: Information breach by unintended sharing of data (e.g. admin errors, storing data in servers in garages)",
+    "04.1: Spoofing of messages (e.g. 802.11p V2X during platooning, GNSS messages, etc.) by impersonation",
+    "04.2: Sybil attack (in order to spoof other vehicles as if there are many vehicles on the road)",
+    "05.1: Communication channels permit code injection into vehicle held data/code, for example tampered software binary might be injected into the communication stream",
+    "05.2: Communication channels permit manipulation of vehicle held data/code",
+    "05.3: Communication channels permit overwrite of vehicle held data/code",
+    "05.4: Communication channels permit erasure of vehicle held data/code",
+    "05.5: Communication channels permit introduction of data/code to vehicle systems (write data code)",
+    "06.1: Accepting information from an unreliable or untrusted source",
+    "06.2: Man in the middle attack / session hijacking",
+    "06.3: Replay attack, for example an attack against a communication gateway allows the attacker to downgrade software of an ECU or firmware of the gateway",
+    "07.1: Interception of information / interfering radiations / monitoring communications",
+    "07.2: Gaining unauthorized access to files or data",
+    "08.1: Sending a large number of garbage data to vehicle information system, so that it is unable to provide services in the normal manner",
+    "08.2: Black hole attack, disruption of communication between vehicles by blocking the transfer of messages to other vehicles",
+    "09.1: An unprivileged user is able to gain privileged access, for example root access",
+    "10.1: Virus embedded in communication media infects vehicle systems",
+    "11.1: Malicious internal (e.g. CAN) messages",
+    "11.2: Malicious V2X messages, e.g. infrastructure to vehicle or vehicle-vehicle messages (e.g. CAM, DENM)",
+    "11.3: Malicious diagnostic messages",
+    "11.4: Malicious proprietary messages (e.g. those normally sent from OEM or component/system/function supplier)",
+    "12.1: Compromise of over the air software update procedures. This includes fabricating the system update program or firmware ",
+    "12.2: Compromise of local/physical software update procedures. This includes fabricating the system update program or firmware",
+    "12.3: The software is manipulated before the update process (and is therefore corrupted), although the update process is intact",
+    "12.4: Compromise of cryptographic keys of the software provider to allow invalid update",
+    "13.1: Denial of Service attack against update server or network to prevent rollout of critical software updates and/or unlock of customer specific features",
+    "15.1: Innocent victim (e.g. owner, operator or maintenance engineer) is tricked into taking an action to unintentionally load malware or enable an attack",
+    "15.2: Defined security procedures are not followed",
+    "16.1: Manipulation of functions designed to remotely operate vehicle systems, such as remote key, immobiliser, and charging pile",
+    "16.2: Manipulation of vehicle telematics (e.g. manipulate temperature measurement of sensitive goods, remotely unlock cargo doors)",
+    "16.3: Interference with short range wireless systems or sensors",
+    "17.1: Corrupted applications, or those with poor software security, used as a method to attack vehicle systems",
+    "18.1: External interfaces such as USB or other ports used as a point of attack, for example through code injection",
+    "18.2: Media infected with viruses connected to the vehicle",
+    "18.3: Diagnostic access (e.g.  dongles in OBD port) used to facilitate an attack, e.g. manipulate vehicle parameters (directly or indirectly)",
+    "19.1: Extraction of copyright or proprietary software from vehicle systems (product piracy / stolen software)",
+    "19.2: Unauthorized access to the owner’s privacy information such as personal identity, payment account information, address book information, location information, vehicle’s electronic ID, etc.",
+    "19.3: Extraction of cryptographic keys",
+    "20.1: Illegal/unauthorised changes to vehicle’s electronic ID",
+    "20.2: Identity fraud. For example, if a user wants to display another identity when communicating with toll systems, manufacturer backend",
+    "20.3: Action to circumvent monitoring systems (e.g. hacking/ tampering/ blocking of messages such as ODR Tracker data, or number of runs)",
+    "20.4: Data manipulation to falsify vehicle’s driving data (e.g. mileage, driving speed, driving directions, etc.)",
+    "20.5: Action to circumvent monitoring systems (e.g. hacking/ tampering/ blocking of messages such as ODR Tracker data, or number of runs)",
+    "21.1: Unauthorized deletion/manipulation of system event logs",
+    "22.2: Introduce malicious software or malicious software activity",
+    "23.1: Fabrication of software of the vehicle control system or information system",
+    "24.1: Denial of service, for example this may be triggered on the internal network by flooding a CAN bus, or by provoking faults on an ECU via a high rate of messaging",
+    "25.1: Unauthorized access to falsify configuration parameters of vehicle’s key functions, such as brake data, airbag deployed threshold, etc.",
+    "25.2: Unauthorized access to falsify charging parameters, such as charging voltage, charging power, battery temperature, etc.",
+    "26.1: Combination of short encryption keys and long period of validity enables attacker to break encryption",
+    "26.2: Insufficient use of cryptographic algorithms to protect sensitive systems",
+    "26.3: Using deprecated cryptographic algorithms ",
+    "27.1: Hardware or software, engineered to enable an attack or fail to meet design criteria to stop an attack",
+    "28.1: The presence of software bugs can be a basis for potential exploitable vulnerabilities. This is particularly true if software has not been tested to verify that known bad code/bugs is not present and reduce the risk of unknown bad code/bugs being present",
+    "28.2: Using remainders from development (e.g. debug ports, JTAG ports, microprocessors, development certificates, developer passwords, …) can permit an attacker to access ECUs or gain higher privileges",
+    "29.1: Superfluous internet ports left open, providing access to network systems",
+    "29.2: Circumvent network separation to gain control. Specific example is the use of unprotected gateways, or access points (such as truck-trailer gateways), to circumvent protections and gain access to other network segments to perform malicious acts, such as sending arbitrary CAN bus messages",
+    "31.1: Information breach. Personal data may be breached when the car changes user (e.g. is sold or is used as hire vehicle with new hirers)",
+    "32.1: Manipulation of OEM hardware, e.g. unauthorised hardware added to a vehicle to enable \"man-in-the-middle\" attack",
+    "32.1: Replacement of authorized electronic hardware (e.g. sensors) with unauthorized electronic hardware",
+    "32.1: Manipulation of information collected by sensors (e.g. tampering with Hall sensors connected to the gearbox using magnets)",
+]
+
+
 def build_attack_methods_schema() -> dict[str, Any]:
     """返回用于 LLM 结构化输出的 JSON Schema。"""
     return {
@@ -219,7 +293,10 @@ def build_tara_schema() -> dict[str, Any]:
                             "entryPoint": {"type": "string"},
                             "logic": {"type": "string", "enum": ["AND", "OR"]},
                             "attackPath": {"type": "string"},
-                            "unR155CsmsAnnex5PartA": {"type": "string"},
+                            "unR155CsmsAnnex5PartA": {
+                                "type": "string",
+                                "enum": UNR155_CSMS_ANNEX5_PARTA_OPTIONS,
+                            },
                             "attackVectorBasedApproach": {
                                 "type": "string",
                                 "enum": ["Very Low", "Low", "Medium", "High"],
@@ -298,6 +375,77 @@ def default_tara_user_prompt() -> str:
         "3) 若提供了 `paths`（Entry→Target 候选路径），优先采用并逐跳拆分覆盖；若未提供，则基于 nodes/edges 自行推导可达的最短（或较短）路径。"
         "4) 不得复用上一组的 entryPoint 值到新组；每组以固定的 entryPoint 开始，"
         "同组内所有行共享相同的 `attackPathNo` 与 `entryPoint`。"
+        "\n\n强约束："
+        "unR155CsmsAnnex5PartA 字段必须严格从以下清单中“逐字匹配”选择一项（不允许 N/A/Unknown/空），每一行均需给出：\n"
+        "- 01.1: Abuse of privileges by staff (insider attack)\n"
+        "- 01.2: Unauthorised internet access to the server (enabled for example by backdoors, unpatched system software vulnerabilities, SQL attacks or other means)\n"
+        "- 01.3: Unauthorised physical access to the server (conducted by for example USB sticks or other media connecting to the server)\n"
+        "- 02.1: Unauthorised physical access to the server (conducted by for example USB sticks or other media connecting to the server)\n"
+        "- 03.1: Abuse of privileges by staff (insider attack)\n"
+        "- 03.2: Loss of information in the cloud. Sensitive data may be lost due to attacks or accidents when data is stored by third-party cloud service providers\n"
+        "- 03.3: Unauthorised internet access to the server (enabled for example by backdoors, unpatched system software vulnerabilities, SQL attacks or other means)\n"
+        "- 03.4: Unauthorised physical access to the server (conducted by for example USB sticks or other media connecting to the server)\n"
+        "- 03.5: Information breach by unintended sharing of data (e.g. admin errors, storing data in servers in garages)\n"
+        "- 04.1: Spoofing of messages (e.g. 802.11p V2X during platooning, GNSS messages, etc.) by impersonation\n"
+        "- 04.2: Sybil attack (in order to spoof other vehicles as if there are many vehicles on the road)\n"
+        "- 05.1: Communication channels permit code injection into vehicle held data/code, for example tampered software binary might be injected into the communication stream\n"
+        "- 05.2: Communication channels permit manipulation of vehicle held data/code\n"
+        "- 05.3: Communication channels permit overwrite of vehicle held data/code\n"
+        "- 05.4: Communication channels permit erasure of vehicle held data/code\n"
+        "- 05.5: Communication channels permit introduction of data/code to vehicle systems (write data code)\n"
+        "- 06.1: Accepting information from an unreliable or untrusted source\n"
+        "- 06.2: Man in the middle attack / session hijacking\n"
+        "- 06.3: Replay attack, for example an attack against a communication gateway allows the attacker to downgrade software of an ECU or firmware of the gateway\n"
+        "- 07.1: Interception of information / interfering radiations / monitoring communications\n"
+        "- 07.2: Gaining unauthorized access to files or data\n"
+        "- 08.1: Sending a large number of garbage data to vehicle information system, so that it is unable to provide services in the normal manner\n"
+        "- 08.2: Black hole attack, disruption of communication between vehicles by blocking the transfer of messages to other vehicles\n"
+        "- 09.1: An unprivileged user is able to gain privileged access, for example root access\n"
+        "- 10.1: Virus embedded in communication media infects vehicle systems\n"
+        "- 11.1: Malicious internal (e.g. CAN) messages\n"
+        "- 11.2: Malicious V2X messages, e.g. infrastructure to vehicle or vehicle-vehicle messages (e.g. CAM, DENM)\n"
+        "- 11.3: Malicious diagnostic messages\n"
+        "- 11.4: Malicious proprietary messages (e.g. those normally sent from OEM or component/system/function supplier)\n"
+        "- 12.1: Compromise of over the air software update procedures. This includes fabricating the system update program or firmware \n"
+        "- 12.2: Compromise of local/physical software update procedures. This includes fabricating the system update program or firmware\n"
+        "- 12.3: The software is manipulated before the update process (and is therefore corrupted), although the update process is intact\n"
+        "- 12.4: Compromise of cryptographic keys of the software provider to allow invalid update\n"
+        "- 13.1: Denial of Service attack against update server or network to prevent rollout of critical software updates and/or unlock of customer specific features\n"
+        "- 15.1: Innocent victim (e.g. owner, operator or maintenance engineer) is tricked into taking an action to unintentionally load malware or enable an attack\n"
+        "- 15.2: Defined security procedures are not followed\n"
+        "- 16.1: Manipulation of functions designed to remotely operate vehicle systems, such as remote key, immobiliser, and charging pile\n"
+        "- 16.2: Manipulation of vehicle telematics (e.g. manipulate temperature measurement of sensitive goods, remotely unlock cargo doors)\n"
+        "- 16.3: Interference with short range wireless systems or sensors\n"
+        "- 17.1: Corrupted applications, or those with poor software security, used as a method to attack vehicle systems\n"
+        "- 18.1: External interfaces such as USB or other ports used as a point of attack, for example through code injection\n"
+        "- 18.2: Media infected with viruses connected to the vehicle\n"
+        "- 18.3: Diagnostic access (e.g.  dongles in OBD port) used to facilitate an attack, e.g. manipulate vehicle parameters (directly or indirectly)\n"
+        "- 19.1: Extraction of copyright or proprietary software from vehicle systems (product piracy / stolen software)\n"
+        "- 19.2: Unauthorized access to the owner’s privacy information such as personal identity, payment account information, address book information, location information, vehicle’s electronic ID, etc.\n"
+        "- 19.3: Extraction of cryptographic keys\n"
+        "- 20.1: Illegal/unauthorised changes to vehicle’s electronic ID\n"
+        "- 20.2: Identity fraud. For example, if a user wants to display another identity when communicating with toll systems, manufacturer backend\n"
+        "- 20.3: Action to circumvent monitoring systems (e.g. hacking/ tampering/ blocking of messages such as ODR Tracker data, or number of runs)\n"
+        "- 20.4: Data manipulation to falsify vehicle’s driving data (e.g. mileage, driving speed, driving directions, etc.)\n"
+        "- 20.5: Action to circumvent monitoring systems (e.g. hacking/ tampering/ blocking of messages such as ODR Tracker data, or number of runs)\n"
+        "- 21.1: Unauthorized deletion/manipulation of system event logs\n"
+        "- 22.2: Introduce malicious software or malicious software activity\n"
+        "- 23.1: Fabrication of software of the vehicle control system or information system\n"
+        "- 24.1: Denial of service, for example this may be triggered on the internal network by flooding a CAN bus, or by provoking faults on an ECU via a high rate of messaging\n"
+        "- 25.1: Unauthorized access to falsify configuration parameters of vehicle’s key functions, such as brake data, airbag deployed threshold, etc.\n"
+        "- 25.2: Unauthorized access to falsify charging parameters, such as charging voltage, charging power, battery temperature, etc.\n"
+        "- 26.1: Combination of short encryption keys and long period of validity enables attacker to break encryption\n"
+        "- 26.2: Insufficient use of cryptographic algorithms to protect sensitive systems\n"
+        "- 26.3: Using deprecated cryptographic algorithms \n"
+        "- 27.1: Hardware or software, engineered to enable an attack or fail to meet design criteria to stop an attack\n"
+        "- 28.1: The presence of software bugs can be a basis for potential exploitable vulnerabilities. This is particularly true if software has not been tested to verify that known bad code/bugs is not present and reduce the risk of unknown bad code/bugs being present\n"
+        "- 28.2: Using remainders from development (e.g. debug ports, JTAG ports, microprocessors, development certificates, developer passwords, …) can permit an attacker to access ECUs or gain higher privileges\n"
+        "- 29.1: Superfluous internet ports left open, providing access to network systems\n"
+        "- 29.2: Circumvent network separation to gain control. Specific example is the use of unprotected gateways, or access points (such as truck-trailer gateways), to circumvent protections and gain access to other network segments to perform malicious acts, such as sending arbitrary CAN bus messages\n"
+        "- 31.1: Information breach. Personal data may be breached when the car changes user (e.g. is sold or is used as hire vehicle with new hirers)\n"
+        "- 32.1: Manipulation of OEM hardware, e.g. unauthorised hardware added to a vehicle to enable \"man-in-the-middle\" attack\n"
+        "- 32.1: Replacement of authorized electronic hardware (e.g. sensors) with unauthorized electronic hardware\n"
+        "- 32.1: Manipulation of information collected by sensors (e.g. tampering with Hall sensors connected to the gearbox using magnets)\n"
         "\n\n只输出 JSON，不要多余解释。"
     )
 
