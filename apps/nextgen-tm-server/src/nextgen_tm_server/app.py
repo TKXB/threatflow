@@ -6,6 +6,7 @@ import json
 import re
 import time
 import logging
+from contextlib import asynccontextmanager
 
 import httpx
 
@@ -21,9 +22,18 @@ from .llm.templates import (
     build_tm_risks_schema,
     default_tm_risks_user_prompt,
 )
+from .db import create_db_and_tables
+from .routers import auth_google
 
 
-app = FastAPI(title="Nextgen TM Server")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动时初始化数据库
+    await create_db_and_tables()
+    yield
+
+
+app = FastAPI(title="Nextgen TM Server", lifespan=lifespan)
 logger = logging.getLogger("nextgen_tm_server")
 if not logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -34,6 +44,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 挂载认证路由
+app.include_router(auth_google.router, prefix="/auth", tags=["auth"])
 
 
 class Node(BaseModel):

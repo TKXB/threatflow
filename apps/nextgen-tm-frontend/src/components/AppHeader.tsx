@@ -1,14 +1,12 @@
 import { Workflow, Bell, ChevronsUpDown, ChevronDown } from "lucide-react";
 import { renderWeChatLogin } from "../auth/wechatLogin";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 export default function AppHeader({ project = "Starter Project", title = "Attack Path", count, mode, onSelectMode, onMenuAction }: { project?: string; title?: string; count?: number; mode: "tm" | "ap"; onSelectMode: (m: "tm" | "ap") => void; onMenuAction?: (key: string) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
-  const [googleUser, setGoogleUser] = useState<{ name?: string; email?: string; picture?: string } | null>(null);
-  const [idToken, setIdToken] = useState<string | null>(null);
-  const STORAGE_KEY = "tf_google_user";
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [loginMenuOpen, setLoginMenuOpen] = useState<boolean>(false);
@@ -17,26 +15,8 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
   const wechatRef = useRef<HTMLDivElement | null>(null);
   const [wechatVisible, setWeChatVisible] = useState(false);
 
-  function logout() {
-    try {
-      const g: any = (window as any).google;
-      const email = googleUser?.email;
-      if (g?.accounts?.id) {
-        if (email) {
-          g.accounts.id.revoke(email, () => {
-            // eslint-disable-next-line no-console
-            console.log("revoked");
-          });
-        }
-        g.accounts.id.disableAutoSelect?.();
-      }
-      try { localStorage.removeItem(STORAGE_KEY); } catch {}
-    } finally {
-      setGoogleUser(null);
-      setIdToken(null);
-      setUserMenuOpen(false);
-    }
-  }
+  // 使用 AuthContext 替代本地状态
+  const { user: googleUser, handleGoogleLogin, logout } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(ev: MouseEvent) {
@@ -55,63 +35,24 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Hydrate from localStorage so refresh does not lose UI state before GIS returns
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as { name?: string; email?: string; picture?: string; token?: string };
-      if (saved && (saved.name || saved.email)) {
-        setGoogleUser({ name: saved.name, email: saved.email, picture: saved.picture });
-        if (saved.token) setIdToken(saved.token);
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    // Google Identity Services (GIS) minimal integration
+    // Google Identity Services (GIS) 集成，委托给 AuthContext 处理
     const CLIENT_ID = "833855760970-n88dvfaq7ha229dh1c9pifrsjso14mt5.apps.googleusercontent.com";
-
-    function base64UrlToJson(b64url: string): any | null {
-      try {
-        let b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
-        const pad = b64.length % 4;
-        if (pad) b64 += "=".repeat(4 - pad);
-        const binary = atob(b64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const jsonStr = typeof TextDecoder !== "undefined" ? new TextDecoder("utf-8").decode(bytes) : decodeURIComponent(escape(binary));
-        return JSON.parse(jsonStr);
-      } catch {
-        return null;
-      }
-    }
-
-    function handleCredentialResponse(response: any) {
-      try {
-        const token = response && response.credential;
-        if (!token) return;
-        const parts = token.split(".");
-        const payload = parts && parts[1] ? base64UrlToJson(parts[1]) : null;
-        const name = payload?.name ?? "";
-        const email = payload?.email ?? "";
-        const picture = payload?.picture ?? "";
-        setGoogleUser({ name, email, picture });
-        setIdToken(token);
-        setLoginMenuOpen(false);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, email, picture, token }));
-        } catch {}
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(e);
-      }
-    }
 
     function init() {
       const g: any = (window as any).google;
       if (!g?.accounts?.id) return;
-      g.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredentialResponse, auto_select: true });
+      
+      // 初始化时将回调绑定到 AuthContext 的 handleGoogleLogin
+      g.accounts.id.initialize({ 
+        client_id: CLIENT_ID, 
+        callback: async (response: any) => {
+          await handleGoogleLogin(response);
+          setLoginMenuOpen(false);
+        }, 
+        auto_select: true 
+      });
+      
       if (googleButtonRef.current) {
         g.accounts.id.renderButton(googleButtonRef.current, {
           type: "standard",
@@ -122,7 +63,8 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
           logo_alignment: "left",
         });
       }
-      // Prompt to restore session if available
+      
+      // 提示恢复会话
       g.accounts.id.prompt();
     }
 
@@ -131,8 +73,10 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
       init();
       return;
     }
+    
     const scriptId = "google-gis-client";
-    if (document.getElementById(scriptId)) return; // already loading
+    if (document.getElementById(scriptId)) return;
+    
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
@@ -140,14 +84,13 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
     script.id = scriptId;
     script.onload = init;
     document.head.appendChild(script);
-  }, []);
+  }, [handleGoogleLogin]);
 
-  // Re-render Google official button when login menu is (re)opened after logout
+  // 登出后重新渲染 Google 按钮
   useEffect(() => {
     const g: any = (window as any).google;
     if (!googleUser && loginMenuOpen && googleButtonRef.current && g?.accounts?.id) {
       try {
-        // Clear previous content then render again to avoid duplicates
         googleButtonRef.current.innerHTML = "";
         g.accounts.id.renderButton(googleButtonRef.current, {
           type: "standard",

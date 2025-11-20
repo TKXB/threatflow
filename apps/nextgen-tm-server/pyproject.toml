@@ -13,6 +13,9 @@ dependencies = [
   "pydantic>=2",
   "orjson>=3",
   "httpx>=0.27",
+  "fastapi-users[sqlalchemy]>=13.0",
+  "aiosqlite>=0.19",
+  "google-auth>=2.23",
 ]
 
 [tool.setuptools.packages.find]
