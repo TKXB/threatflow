@@ -193,7 +193,7 @@ export default function ThreatModelingApp() {
   }, [nodes, edges, idSeq, llmBaseUrl, llmApiKey, llmModel, acceptedFindings, settingsHydrated]);
 
   // API base for server
-  const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
+  const API = (import.meta as any).env?.VITE_NEXTGEN_API || "";
 
   // ----- Palette loading chain: LocalStorage > Backend plugins > Default file -----
   async function loadPaletteFromLocal(): Promise<TmPaletteConfig | null> {

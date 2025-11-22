@@ -14,6 +14,11 @@ export default defineConfig({
         target: 'http://localhost:8890',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      // 代理 /analysis 请求到后端 (与 Nginx 保持一致)
+      '/analysis': {
+        target: 'http://localhost:8890',
+        changeOrigin: true
       }
     }
   },

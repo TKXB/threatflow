@@ -112,7 +112,7 @@ export default function AttackPathApp() {
   const [taraRows, setTaraRows] = useState<TaraRow[] | null>(null);
   const [taraLoading, setTaraLoading] = useState(false);
   const [settingsHydrated, setSettingsHydrated] = useState(false);
-  const API = (import.meta as any).env?.VITE_NEXTGEN_API || "http://127.0.0.1:8890";
+  const API = (import.meta as any).env?.VITE_NEXTGEN_API || "";
   const [llmBaseUrl, setLlmBaseUrl] = useState<string>("http://127.0.0.1:4000/v1");
   const [llmApiKey, setLlmApiKey] = useState<string>("");
   const [llmModel, setLlmModel] = useState<string>("gpt-4o-mini");
@@ -239,7 +239,8 @@ export default function AttackPathApp() {
 
     async function loadPaletteFromBackend(): Promise<PaletteConfig | null> {
     try {
-      const res = await fetch(`${API}/palette/plugins`, { headers: { "accept": "application/json" } });
+      // Always use /api prefix so requests go through Nginx/Vite proxy
+      const res = await fetch(`/api/palette/plugins`, { headers: { "accept": "application/json" } });
       const json = await res.json();
       const sections = Array.isArray(json?.sections) ? json.sections : [];
       if (sections.length > 0) return { sections } as PaletteConfig;
