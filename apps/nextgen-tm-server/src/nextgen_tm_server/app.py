@@ -641,7 +641,7 @@ def _validate_item(raw: dict[str, Any]) -> dict[str, Any] | None:
     return out
 
 
-@app.get("/api/palette/plugins")
+@app.get("/palette/plugins")
 def get_palette_plugins() -> dict[str, Any]:
     # Discover roots: env only (simple, explicit). Users can set TF_PLUGIN_DIR
     # Example: TF_PLUGIN_DIR=/data/plugins/attackpath

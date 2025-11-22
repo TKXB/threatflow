@@ -237,9 +237,9 @@ export default function AttackPathApp() {
     return null;
   }
 
-  async function loadPaletteFromBackend(): Promise<PaletteConfig | null> {
+    async function loadPaletteFromBackend(): Promise<PaletteConfig | null> {
     try {
-      const res = await fetch(`${API}/api/palette/plugins`, { headers: { "accept": "application/json" } });
+      const res = await fetch(`${API}/palette/plugins`, { headers: { "accept": "application/json" } });
       const json = await res.json();
       const sections = Array.isArray(json?.sections) ? json.sections : [];
       if (sections.length > 0) return { sections } as PaletteConfig;
