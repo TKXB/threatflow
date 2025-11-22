@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 
 interface User {
   email: string;
@@ -42,28 +42,31 @@ function base64UrlToJson(b64url: string): any | null {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  
   const STORAGE_KEY_USER = "tf_google_user";
   const STORAGE_KEY_JWT = "tm_token";
 
-  // 启动时从 localStorage 恢复状态
-  useEffect(() => {
+  const [user, setUser] = useState<User | null>(() => {
     try {
       const rawUser = localStorage.getItem(STORAGE_KEY_USER);
       if (rawUser) {
         const saved = JSON.parse(rawUser);
         if (saved && (saved.name || saved.email)) {
-          setUser(saved);
+          return saved;
         }
       }
-      const savedToken = localStorage.getItem(STORAGE_KEY_JWT);
-      if (savedToken) setToken(savedToken);
     } catch {}
-  }, []);
+    return null;
+  });
+  
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY_JWT);
+    } catch {
+      return null;
+    }
+  });
 
-  const handleGoogleLogin = async (response: any) => {
+  const handleGoogleLogin = useCallback(async (response: any) => {
     console.log("==================== Google 登录开始 ====================");
     try {
       const idToken = response?.credential;
@@ -124,9 +127,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       console.error("❌ Google 登录处理错误:", e);
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     // 1. 尝试撤销 Google Token
     try {
       const g: any = (window as any).google;
@@ -141,9 +144,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     localStorage.removeItem(STORAGE_KEY_USER);
     localStorage.removeItem(STORAGE_KEY_JWT);
-  };
+  }, [user?.email]);
 
-  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
     const headers = new Headers(options.headers);
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
@@ -156,17 +159,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     return res;
-  };
+  }, [token, logout]);
+
+  const value = useMemo(() => ({ 
+    user, 
+    token, 
+    isAuthenticated: !!user, 
+    handleGoogleLogin, 
+    logout, 
+    fetchWithAuth 
+  }), [user, token, handleGoogleLogin, logout, fetchWithAuth]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      isAuthenticated: !!user, 
-      handleGoogleLogin, 
-      logout, 
-      fetchWithAuth 
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
