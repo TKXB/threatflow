@@ -1,0 +1,18 @@
+{
+  "id": "asset.android.os",
+  "label": "Android OS",
+  "icon": "🤖",
+  "type": "asset",
+  "technology": "android-os",
+  "priority": 30,
+  "domain": "Android",
+  "flags": {
+    "properties": [
+      { "key": "version", "label": "Version", "type": "input", "default": "14" },
+      { "key": "apiLevel", "label": "API Level", "type": "input", "default": "34" },
+      { "key": "rooted", "label": "Rooted", "type": "select", "options": [ { "value": "no", "label": "No" }, { "value": "yes", "label": "Yes" } ], "default": "no" }
+    ]
+  }
+}
+
+

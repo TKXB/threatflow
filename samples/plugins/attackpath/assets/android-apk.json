@@ -1,0 +1,19 @@
+{
+  "id": "asset.android.apk",
+  "label": "Android APK",
+  "icon": "📦",
+  "type": "asset",
+  "technology": "android-apk",
+  "priority": 32,
+  "domain": "Android",
+  "flags": {
+    "properties": [
+      { "key": "packageName", "label": "Package Name", "type": "input", "default": "com.example.app" },
+      { "key": "versionName", "label": "Version Name", "type": "input", "default": "1.0.0" },
+      { "key": "versionCode", "label": "Version Code", "type": "input", "default": "1" },
+      { "key": "debuggable", "label": "Debuggable", "type": "select", "options": [ { "value": "no", "label": "No" }, { "value": "yes", "label": "Yes" } ], "default": "no" }
+    ]
+  }
+}
+
+
