@@ -1,7 +1,7 @@
 {
   "id": "asset.auto.ivi",
   "label": "IVI",
-  "icon": "🎛️",
+  "icon": "/icons/infotainment.svg",
   "type": "asset",
   "technology": "ivi",
   "priority": 75,
