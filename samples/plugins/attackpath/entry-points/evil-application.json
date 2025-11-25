@@ -1,0 +1,10 @@
+{
+  "id": "entry.app.evil",
+  "label": "Evil Application",
+  "icon": "😈",
+  "type": "entryPoint",
+  "technology": "app",
+  "priority": 40
+}
+
+

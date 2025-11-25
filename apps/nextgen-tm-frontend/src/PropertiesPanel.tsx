@@ -81,6 +81,26 @@ function RowInput({ label, value, placeholder, onChange }: InputProps) {
   );
 }
 
+const PROTOCOL_OPTIONS: { value: string; label: string }[] = [
+  { value: "unknown", label: "Unknown / Not Modeled" },
+  { value: "in-process-call", label: "In-process Call" },
+  { value: "local-ipc-socket", label: "Local IPC Socket" },
+  { value: "shared-memory", label: "Shared Memory" },
+  { value: "local-message-queue", label: "Local Message Queue" },
+  { value: "file-transfer", label: "File Transfer" },
+  { value: "ethernet", label: "Ethernet" },
+  { value: "wifi", label: "Wi-Fi" },
+  { value: "cellular", label: "Cellular / WWAN" },
+  { value: "wireless-short-range", label: "Wireless Short Range (BLE/Zigbee)" },
+  { value: "can-bus", label: "CAN Bus" },
+  { value: "fieldbus", label: "Fieldbus" },
+  { value: "serial-link", label: "Serial Link" },
+  { value: "spi-bus", label: "SPI Bus" },
+  { value: "jtag-debug-link", label: "JTAG / Debug Link" },
+  { value: "remote-rpc", label: "Remote RPC / API" },
+  { value: "other", label: "Other / Custom" },
+];
+
 export type PanelProps = {
   kind: "node" | "edge" | null;
   nodeType?: string;
@@ -330,56 +350,8 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
       />
       <RowSelect
         label="Protocol"
-        value={data?.protocol ?? "https"}
-        options={[
-          { value: "unknown-protocol", label: "unknown-protocol" },
-          { value: "http", label: "http" },
-          { value: "https", label: "https" },
-          { value: "ws", label: "ws" },
-          { value: "wss", label: "wss" },
-          { value: "reverse-proxy-web-protocol", label: "reverse-proxy-web-protocol" },
-          { value: "reverse-proxy-web-protocol-encrypted", label: "reverse-proxy-web-protocol-encrypted" },
-          { value: "mqtt", label: "mqtt" },
-          { value: "jdbc", label: "jdbc" },
-          { value: "jdbc-encrypted", label: "jdbc-encrypted" },
-          { value: "odbc", label: "odbc" },
-          { value: "odbc-encrypted", label: "odbc-encrypted" },
-          { value: "sql-access-protocol", label: "sql-access-protocol" },
-          { value: "sql-access-protocol-encrypted", label: "sql-access-protocol-encrypted" },
-          { value: "nosql-access-protocol", label: "nosql-access-protocol" },
-          { value: "nosql-access-protocol-encrypted", label: "nosql-access-protocol-encrypted" },
-          { value: "binary", label: "binary" },
-          { value: "binary-encrypted", label: "binary-encrypted" },
-          { value: "text", label: "text" },
-          { value: "text-encrypted", label: "text-encrypted" },
-          { value: "ssh", label: "ssh" },
-          { value: "ssh-tunnel", label: "ssh-tunnel" },
-          { value: "smtp", label: "smtp" },
-          { value: "smtp-encrypted", label: "smtp-encrypted" },
-          { value: "pop3", label: "pop3" },
-          { value: "pop3-encrypted", label: "pop3-encrypted" },
-          { value: "imap", label: "imap" },
-          { value: "imap-encrypted", label: "imap-encrypted" },
-          { value: "ftp", label: "ftp" },
-          { value: "ftps", label: "ftps" },
-          { value: "sftp", label: "sftp" },
-          { value: "scp", label: "scp" },
-          { value: "ldap", label: "ldap" },
-          { value: "ldaps", label: "ldaps" },
-          { value: "jms", label: "jms" },
-          { value: "nfs", label: "nfs" },
-          { value: "smb", label: "smb" },
-          { value: "smb-encrypted", label: "smb-encrypted" },
-          { value: "local-file-access", label: "local-file-access" },
-          { value: "nrpe", label: "nrpe" },
-          { value: "xmpp", label: "xmpp" },
-          { value: "iiop", label: "iiop" },
-          { value: "iiop-encrypted", label: "iiop-encrypted" },
-          { value: "jrmp", label: "jrmp" },
-          { value: "jrmp-encrypted", label: "jrmp-encrypted" },
-          { value: "in-process-library-call", label: "in-process-library-call" },
-          { value: "container-spawning", label: "container-spawning" },
-        ]}
+        value={data?.protocol ?? "remote-rpc"}
+        options={PROTOCOL_OPTIONS}
         onChange={(v) => onEdgeChange({ protocol: v })}
       />
       <RowSelect
