@@ -100,6 +100,7 @@ export default function ThreatModelingApp() {
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [history, setHistory] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const [future, setFuture] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const [focusedNodeIds, setFocusedNodeIds] = useState<string[]>([]);
   const threagileInputRef = useRef<HTMLInputElement | null>(null);
   const paletteFileInputRef = useRef<HTMLInputElement | null>(null);
   const otmImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -815,6 +816,71 @@ export default function ThreatModelingApp() {
     updateBoundaryContainment();
   }, []);
 
+  const handleFocusRisk = useCallback((nodeIds: string[] | null) => {
+    if (!nodeIds || nodeIds.length === 0) {
+      setFocusedNodeIds([]);
+      return;
+    }
+    
+    setFocusedNodeIds(nodeIds);
+    
+    // 计算所有相关节点的中心位置
+    const relevantNodes = nodes.filter((n) => nodeIds.includes(n.id));
+    if (relevantNodes.length === 0) return;
+    
+    // 计算边界框
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    relevantNodes.forEach((node) => {
+      const x = node.position.x;
+      const y = node.position.y;
+      const w = (node as any).width || 100;
+      const h = (node as any).height || 60;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + w);
+      maxY = Math.max(maxY, y + h);
+    });
+    
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    
+    // 平移画布到中心位置（不改变缩放）
+    if (rfInstance) {
+      rfInstance.setCenter(centerX, centerY, { duration: 400 });
+    }
+  }, [nodes, rfInstance]);
+
+  // 根据 focusedNodeIds 计算高亮的节点和边
+  const highlightedNodes = useMemo(() => {
+    if (focusedNodeIds.length === 0) return nodes;
+    return nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        __hl: focusedNodeIds.includes(node.id),
+      },
+    }));
+  }, [nodes, focusedNodeIds]);
+
+  const highlightedEdges = useMemo(() => {
+    if (focusedNodeIds.length === 0) return edges;
+    // 高亮连接 focusedNodeIds 中节点的边
+    return edges.map((edge) => {
+      const isRelated = focusedNodeIds.includes(edge.source) || focusedNodeIds.includes(edge.target);
+      if (isRelated) {
+        return {
+          ...edge,
+          style: {
+            ...(edge.style || {}),
+            stroke: "#2563eb",
+            strokeWidth: 3,
+          },
+        };
+      }
+      return edge;
+    });
+  }, [edges, focusedNodeIds]);
+
   return (
     <div className="app" style={{ height: "100%", display: "flex", overflow: "hidden" }}>
       <WelcomeModal
@@ -840,8 +906,8 @@ export default function ThreatModelingApp() {
                 `}
               </style>
               <ReactFlow
-                nodes={nodes}
-                edges={edges}
+                nodes={highlightedNodes}
+                edges={highlightedEdges}
                 onNodesChange={(changes) => {
                   (onNodesChange as OnNodesChange)(changes);
                   setNodes((nds) => nds.map((n) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 })));
@@ -899,7 +965,11 @@ export default function ThreatModelingApp() {
                 a.click();
                 URL.revokeObjectURL(url);
               }}
-              onClose={() => { setLlmRisks(null); }}
+              onClose={() => { 
+                setLlmRisks(null); 
+                setFocusedNodeIds([]);
+              }}
+              onFocusRisk={handleFocusRisk}
             />
 
             {showLlmSettings ? (
