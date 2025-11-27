@@ -81,6 +81,37 @@ function RowInput({ label, value, placeholder, onChange }: InputProps) {
   );
 }
 
+type TextareaProps = {
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+};
+
+function RowTextarea({ label, value, placeholder, onChange }: TextareaProps) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontSize: 12, color: "#6b7280" }}>{label}</span>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={4}
+        style={{
+          border: "1px solid #d1d5db",
+          borderRadius: 6,
+          padding: "6px 8px",
+          background: "#fff",
+          width: "100%",
+          fontFamily: "inherit",
+          fontSize: 12,
+          resize: "vertical",
+        }}
+      />
+    </label>
+  );
+}
+
 const PROTOCOL_OPTIONS: { value: string; label: string }[] = [
   { value: "unknown", label: "Unknown / Not Modeled" },
   { value: "in-process-call", label: "In-process Call" },
@@ -182,6 +213,12 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
               ]}
               onChange={(v) => onNodeChange({ providesAuthentication: v })}
             />
+            <RowTextarea
+              label="Additional Information"
+              value={data?.additionalInformation ?? ""}
+              placeholder="Additional notes or remarks..."
+              onChange={(v) => onNodeChange({ additionalInformation: v })}
+            />
           </div>
         );
       case "process":
@@ -224,6 +261,12 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
               ]}
               onChange={(v) => onNodeChange({ impact: v })}
             />
+            <RowTextarea
+              label="Additional Information"
+              value={data?.additionalInformation ?? ""}
+              placeholder="Additional notes or remarks..."
+              onChange={(v) => onNodeChange({ additionalInformation: v })}
+            />
           </div>
         );
       case "store":
@@ -260,6 +303,12 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
             {Array.isArray((data as any)?.properties) && (
               <DynamicFields defs={(data as any).properties as any} data={data} onChange={onNodeChange} />
             )}
+            <RowTextarea
+              label="Additional Information"
+              value={data?.additionalInformation ?? ""}
+              placeholder="Additional notes or remarks..."
+              onChange={(v) => onNodeChange({ additionalInformation: v })}
+            />
           </div>
         );
       case "asset":
@@ -296,6 +345,12 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
             {Array.isArray((data as any)?.properties) && (
               <DynamicFields defs={(data as any).properties as any} data={data} onChange={onNodeChange} />
             )}
+            <RowTextarea
+              label="Additional Information"
+              value={data?.additionalInformation ?? ""}
+              placeholder="Additional notes or remarks..."
+              onChange={(v) => onNodeChange({ additionalInformation: v })}
+            />
           </div>
         );
       case "trustBoundary":
@@ -326,6 +381,30 @@ export default memo(function PropertiesPanel({ kind, nodeType, data, onNodeChang
                 </div>
               </div>
             )}
+            <RowTextarea
+              label="Additional Information"
+              value={data?.additionalInformation ?? ""}
+              placeholder="Additional notes or remarks..."
+              onChange={(v) => onNodeChange({ additionalInformation: v })}
+            />
+          </div>
+        );
+      case "entryPoint":
+        return (
+          <div className="right-panel" style={panelStyle}>
+            <h3>Entry Point</h3>
+            <RowInput
+              label="Label"
+              value={data?.label ?? ""}
+              placeholder="Entry Point label"
+              onChange={(v) => onNodeChange({ label: v })}
+            />
+            <RowTextarea
+              label="Additional Information"
+              value={data?.additionalInformation ?? ""}
+              placeholder="Additional notes or remarks..."
+              onChange={(v) => onNodeChange({ additionalInformation: v })}
+            />
           </div>
         );
       default:
