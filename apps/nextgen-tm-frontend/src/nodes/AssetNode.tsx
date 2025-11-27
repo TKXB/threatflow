@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useStore } from "@xyflow/react";
 import { FaShieldAlt } from 'react-icons/fa';
 
 type AssetData = { label: string; technology?: string; icon?: string };
@@ -12,9 +12,12 @@ const THEME = {
   textColor: "#111827",
 };
 
+const connectionSelector = (s: any) => s.connection?.inProgress;
+
 export default memo(function AssetNode({ data }: { data: AssetData }) {
   const theme = THEME;
   const [isHovered, setIsHovered] = useState(false);
+  const isConnecting = useStore(connectionSelector);
 
   function renderIcon(icon?: string) {
     if (!icon) return null;
@@ -48,6 +51,20 @@ export default memo(function AssetNode({ data }: { data: AssetData }) {
     return <span style={{ fontSize: 24, lineHeight: 1 }}>{trimmed}</span>;
   }
 
+  const targetStyle = (base: React.CSSProperties) => ({
+    ...base,
+    zIndex: isConnecting ? 12 : 10,
+    opacity: isHovered ? 1 : 0,
+    pointerEvents: (isConnecting && isHovered) ? "auto" : "none",
+  } as React.CSSProperties);
+
+  const sourceStyle = (base: React.CSSProperties) => ({
+    ...base,
+    zIndex: !isConnecting ? 12 : 10,
+    opacity: isHovered ? 1 : 0,
+    pointerEvents: (!isConnecting && isHovered) ? "auto" : "none",
+  } as React.CSSProperties);
+
   return (
     <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 6 }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div style={{ width: 96, height: 96, position: "relative" }}>
@@ -63,12 +80,23 @@ export default memo(function AssetNode({ data }: { data: AssetData }) {
           <div style={{ fontSize: 11, color: theme.textColor, fontWeight: 700, textAlign: "center", lineHeight: 1.2, wordBreak: "break-word", maxWidth: "100%" }}>{data.label}</div>
         </div>
       </div>
-      {/* 四边各一个连接点。左/上为 target，右/下为 source。默认隐藏，悬停时显示。*/}
-      <Handle id="left" type="target" position={Position.Left} style={{ left: 5, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
-      <Handle id="top" type="target" position={Position.Top} style={{ top: 3, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
-      <Handle id="right" type="source" position={Position.Right} style={{ right: 5, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
-      <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: 7, zIndex: 10, opacity: isHovered ? 1 : 0, pointerEvents: isHovered ? "auto" : "none" }} />
+      {/* 四边各一个连接点。每个位置同时放置 Source 和 Target Handle。 */}
+      
+      {/* Left */}
+      <Handle id="left" type="target" position={Position.Left} style={targetStyle({ left: 5 })} />
+      <Handle id="left" type="source" position={Position.Left} style={sourceStyle({ left: 5 })} />
+      
+      {/* Top */}
+      <Handle id="top" type="target" position={Position.Top} style={targetStyle({ top: 3 })} />
+      <Handle id="top" type="source" position={Position.Top} style={sourceStyle({ top: 3 })} />
+      
+      {/* Right */}
+      <Handle id="right" type="target" position={Position.Right} style={targetStyle({ right: 5 })} />
+      <Handle id="right" type="source" position={Position.Right} style={sourceStyle({ right: 5 })} />
+      
+      {/* Bottom */}
+      <Handle id="bottom" type="target" position={Position.Bottom} style={targetStyle({ bottom: 7 })} />
+      <Handle id="bottom" type="source" position={Position.Bottom} style={sourceStyle({ bottom: 7 })} />
     </div>
   );
 });
-
