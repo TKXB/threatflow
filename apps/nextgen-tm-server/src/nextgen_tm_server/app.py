@@ -28,7 +28,6 @@ from .routers import auth_google
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动时初始化数据库
     await create_db_and_tables()
     yield
 
@@ -45,7 +44,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 挂载认证路由
 app.include_router(auth_google.router, prefix="/auth", tags=["auth"])
 
 
@@ -184,7 +182,6 @@ def analysis_paths(req: AnalyzeRequest) -> dict[str, Any]:
     k = max(1, int(req.k))
     max_depth = max(1, int(req.maxDepth))
     paths = _analyze_simple_paths(req.nodes, req.edges, k=k, max_depth=max_depth, sources=req.sources, targets=req.targets)
-    # compute simple scores
     id_to_node = {n.id: n for n in req.nodes}
     def score(path: dict[str, Any]) -> float:
         total = 0.0
@@ -203,12 +200,10 @@ def analysis_paths(req: AnalyzeRequest) -> dict[str, Any]:
     return {"ok": True, "paths": scored[:k]}
 
 
-# ===== LLM (LiteLLM/OpenAI 兼容代理) 集成 =====
-
 class LlmConfig(BaseModel):
-    baseUrl: str | None = None  # 例如 http://127.0.0.1:4000/v1
+    baseUrl: str | None = None
     apiKey: str | None = None
-    model: str | None = None    # 例如 gpt-4o-mini
+    model: str | None = None
 
 
 class LlmMethodsRequest(BaseModel):
@@ -230,7 +225,6 @@ def _extract_json(text: str) -> dict[str, Any]:
         return json.loads(text)
     except Exception:
         pass
-    # 尝试提取 JSON 片段
     m = re.search(r"\{[\s\S]*\}", text)
     if m:
         try:
@@ -243,16 +237,13 @@ def _extract_json(text: str) -> dict[str, Any]:
 @app.post("/analysis/llm/methods")
 def analysis_methods_llm(req: LlmMethodsRequest) -> dict[str, Any]:
     t0 = time.perf_counter()
-    # 先获取基准路径（可作为 LLM 的上下文）
     base = analysis_paths(AnalyzeRequest(nodes=req.nodes, edges=req.edges, k=req.k, maxDepth=req.maxDepth))
     paths = base["paths"]
 
-    # 解析 LLM 配置（前端传入优先，其次环境变量）
     llm_base = (req.llm and req.llm.baseUrl) or _get_env("LLM_BASE_URL", "http://127.0.0.1:4000/v1")
     llm_key = (req.llm and req.llm.apiKey) or _get_env("LLM_API_KEY", "")
     model = (req.llm and req.llm.model) or _get_env("LLM_MODEL", "gpt-4o-mini")
 
-    # 组织提示词与 JSON Schema（尽量获得结构化输出）
     schema: dict[str, Any] = build_attack_methods_schema()
 
     user_prompt = req.prompt or default_methods_user_prompt()
@@ -280,7 +271,6 @@ def analysis_methods_llm(req: LlmMethodsRequest) -> dict[str, Any]:
             len(req.edges),
             len(paths),
         )
-        # Log outbound POST body to OpenAI-compatible endpoint (truncated)
         try:
             outbound_body = json.dumps(payload, ensure_ascii=False)
             max_len = int(os.getenv("LLM_REQ_LOG_MAX_BYTES", "20000") or "20000")
@@ -296,7 +286,6 @@ def analysis_methods_llm(req: LlmMethodsRequest) -> dict[str, Any]:
         content = (data.get("choices") or [{}])[0].get("message", {}).get("content", "{}")
         parsed = _extract_json(content)
         methods = parsed.get("methods") or []
-        # 最多返回 k 条
         result = {"ok": True, "methods": methods[: int(req.k)]}
         logger.info(
             "LLM methods: success | model=%s elapsed_ms=%d methods=%d resp_bytes=%d",
@@ -316,7 +305,6 @@ def analysis_methods_llm(req: LlmMethodsRequest) -> dict[str, Any]:
         return {"ok": False, "error": str(ex), "methods": []}
 
 
-# 新增：LLM 生成 TARA 表格
 @app.post("/analysis/llm/tara")
 def analysis_tara_llm(req: LlmMethodsRequest) -> dict[str, Any]:
     t0 = time.perf_counter()
@@ -353,7 +341,6 @@ def analysis_tara_llm(req: LlmMethodsRequest) -> dict[str, Any]:
             len(req.edges),
             len(paths),
         )
-        # Log outbound POST body to OpenAI-compatible endpoint (truncated)
         try:
             outbound_body = json.dumps(payload, ensure_ascii=False)
             max_len = int(os.getenv("LLM_REQ_LOG_MAX_BYTES", "20000") or "20000")
@@ -364,7 +351,6 @@ def analysis_tara_llm(req: LlmMethodsRequest) -> dict[str, Any]:
             logger.exception("Failed to log LLM upstream request body")
         r = httpx.post(f"{llm_base}/chat/completions", headers=headers, json=payload, timeout=60)
         r.raise_for_status()
-        # Log inbound response body (truncated)
         try:
             inbound_body = r.text or ""
             max_len_resp = int(os.getenv("LLM_RESP_LOG_MAX_BYTES", "20000") or "20000")
@@ -402,7 +388,6 @@ def analysis_tara_llm(req: LlmMethodsRequest) -> dict[str, Any]:
         return {"ok": False, "error": str(ex), "rows": []}
 
 
-# 新增：ThreatModeling 风险生成（独立于 TARA）
 @app.post("/analysis/tm/llm/risks")
 def analysis_tm_risks_llm(req: LlmMethodsRequest) -> dict[str, Any]:
     t0 = time.perf_counter()
@@ -447,7 +432,6 @@ def analysis_tm_risks_llm(req: LlmMethodsRequest) -> dict[str, Any]:
         parsed = _extract_json(content)
         risks = parsed.get("risks") or []
 
-        # 为每条风险计算简单分数与数值化严重度（不覆盖 LLM 的文本严重度）
         id_to_node = {n.id: n for n in req.nodes}
         for rk in risks:
             try:
@@ -486,8 +470,6 @@ def analysis_tm_risks_llm(req: LlmMethodsRequest) -> dict[str, Any]:
         elapsed = time.perf_counter() - t0
         logger.exception("LLM TM Risks: failed | elapsed_ms=%d", int(elapsed * 1000))
         return {"ok": False, "error": str(ex), "risks": []}
-
-# ===== Plugins aggregation (Entry Points / Assets as standalone JSON files) =====
 
 def _env(name: str, default: str | None = None) -> str | None:
     val = os.getenv(name)
@@ -528,19 +510,16 @@ def _collect_plugins_from_dir(root: str) -> dict[str, list[dict[str, Any]]]:
 
 
 def _default_plugins_root() -> str:
-    # Resolve repo-root-relative samples/plugins/attackpath as a sensible default
     here = os.path.dirname(__file__)
     repo_root = os.path.abspath(os.path.join(here, "../../../.."))
     return os.path.join(repo_root, "samples", "plugins", "attackpath")
 
 
 def _validate_item(raw: dict[str, Any]) -> dict[str, Any] | None:
-    # minimal validation: require label and type
     label = str(raw.get("label") or "").strip()
     typ = str(raw.get("type") or "").strip()
     if not label or not typ:
         return None
-    # normalize fields
     out: dict[str, Any] = {
         "label": label,
         "type": typ,
@@ -553,7 +532,6 @@ def _validate_item(raw: dict[str, Any]) -> dict[str, Any] | None:
         out["flags"] = raw.get("flags")
     if raw.get("priority") is not None:
         out["priority"] = raw.get("priority")
-    # pass-through optional asset domain for frontend grouping
     if raw.get("domain") is not None:
         out["domain"] = raw.get("domain")
     if raw.get("beta") is not None:
@@ -567,13 +545,10 @@ def _validate_item(raw: dict[str, Any]) -> dict[str, Any] | None:
 
 @app.get("/palette/plugins")
 def get_palette_plugins() -> dict[str, Any]:
-    # Discover roots: env only (simple, explicit). Users can set TF_PLUGIN_DIR
-    # Example: TF_PLUGIN_DIR=/data/plugins/attackpath
     roots: list[str] = []
     env_root = _env("TF_PLUGIN_DIR")
     if env_root:
         roots.append(env_root)
-    # Fallback to repo default if env not provided
     default_root = _default_plugins_root()
     if os.path.isdir(default_root):
         roots.append(default_root)
@@ -592,7 +567,6 @@ def get_palette_plugins() -> dict[str, Any]:
             v = _validate_item(raw)
             if v:
                 items.append(v)
-        # sort by priority then label
         items.sort(key=lambda x: (int(x.get("priority", 1e9)), str(x.get("label", "").lower())))
         return {"title": title, "items": items}
 
