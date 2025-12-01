@@ -3,18 +3,19 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import type { TaraRow } from "../types/tara";
 import { useState, useCallback, useRef } from "react";
 import ContextMenu from "./ContextMenu";
-import { Maximize2, X } from "lucide-react";
+import { Maximize2, Minus, X } from "lucide-react";
 import * as XLSX from "xlsx";
 
 type Props = {
   rows: TaraRow[] | null;
   onOpenFullscreen: () => void;
   onReanalyzeRow?: (rowIndex: number) => void;
+  onMinimize?: () => void;
   onClose?: () => void;
   loading?: boolean;
 };
 
-export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onClose, loading }: Props) {
+export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onMinimize, onClose, loading }: Props) {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const closeCtx = useCallback(() => setCtxMenu(null), []);
@@ -183,6 +184,11 @@ export default function TaraTable({ rows, onOpenFullscreen, onReanalyzeRow, onCl
         <button onClick={onOpenFullscreen} title="Open full screen" aria-label="Open full screen" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#2563eb", background: "transparent", border: 0, cursor: "pointer" }}>
           <Maximize2 size={13} />
         </button>
+        {onMinimize && (
+          <button onClick={onMinimize} title="Minimize" aria-label="Minimize" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6b7280", background: "transparent", border: 0, cursor: "pointer" }}>
+            <Minus size={16} />
+          </button>
+        )}
         <button onClick={() => onClose && onClose()} title="Close" aria-label="Close" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6b7280", background: "transparent", border: 0, cursor: "pointer" }}>
           <X size={18} />
         </button>

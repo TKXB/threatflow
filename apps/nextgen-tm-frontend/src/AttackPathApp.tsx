@@ -111,6 +111,7 @@ export default function AttackPathApp() {
   const [llmMethods, setLlmMethods] = useState<LlmAttackMethod[] | null>(null);
   const [taraRows, setTaraRows] = useState<TaraRow[] | null>(null);
   const [taraLoading, setTaraLoading] = useState(false);
+  const [taraMinimized, setTaraMinimized] = useState(false);
   const [settingsHydrated, setSettingsHydrated] = useState(false);
   const API = (import.meta as any).env?.VITE_NEXTGEN_API || "";
   const [llmBaseUrl, setLlmBaseUrl] = useState<string>("http://127.0.0.1:4000/v1");
@@ -1359,7 +1360,7 @@ export default function AttackPathApp() {
         <div className="canvas" ref={reactFlowWrapper} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div className="content" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-            {(() => { const hasBottom = (llmMethods && llmMethods.length > 0) || (taraRows && taraRows.length > 0) || taraLoading; return (
+            {(() => { const hasBottom = (llmMethods && llmMethods.length > 0) || ((taraRows && taraRows.length > 0) && !taraMinimized) || taraLoading; return (
             <div className="flow" style={{ height: hasBottom ? "50%" : "100%", position: "relative" }}>
               <div style={{ position: "absolute", right: 12, top: 12, zIndex: 20 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
@@ -1457,11 +1458,12 @@ export default function AttackPathApp() {
                 </div>
               </div>
             )}
-            {taraRows && taraRows.length > 0 && (
+            {taraRows && taraRows.length > 0 && !taraMinimized && (
               <TaraTable
                 rows={taraRows}
                 loading={taraLoading}
                 onOpenFullscreen={() => setShowTaraFullscreen(true)}
+                onMinimize={() => setTaraMinimized(true)}
                 onClose={() => setTaraRows([])}
                 onReanalyzeRow={(rowIndex) => {
                   (async () => {
@@ -1479,6 +1481,36 @@ export default function AttackPathApp() {
                   })();
                 }}
               />
+            )}
+            {taraRows && taraRows.length > 0 && taraMinimized && (
+              <div
+                onClick={() => setTaraMinimized(false)}
+                style={{
+                  position: "fixed",
+                  bottom: 16,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 16px",
+                  background: "#111827",
+                  color: "#fff",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  zIndex: 50,
+                }}
+                title="Click to restore TARA Table"
+              >
+                <span>TARA Table</span>
+                <span style={{ background: "#374151", padding: "2px 8px", borderRadius: 4, fontSize: 11 }}>
+                  {taraRows.length} rows
+                </span>
+                <Maximize2 size={14} />
+              </div>
             )}
             {showTaraFullscreen && (
               <div style={{ position: "fixed", inset: 0, background: "#ffffff", zIndex: 2000, display: "flex", flexDirection: "column" }}>
