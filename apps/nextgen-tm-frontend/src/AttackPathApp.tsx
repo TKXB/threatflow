@@ -26,7 +26,6 @@ import AssetNode from "./nodes/AssetNode";
 import type { ScoredPath } from "./utils/pathAnalysis";
 import { buildOtmFromGraph, applyOtmToGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
-import type { AttackMethod } from "./knowledge/attackMethods";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import WelcomeModal from "./components/WelcomeModal";
 import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, Minimize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw } from "lucide-react";
@@ -468,19 +467,6 @@ export default function AttackPathApp() {
               const text = paths.map((p, i) => `${i + 1}. [score=${p.score}] ${(p as any).labels?.join(" -> ") || (p as any).nodeIds?.join(" -> ")}`).join("\n");
               alert(`Top paths (scored):\n${text}`);
             } catch (e) { console.error(e); alert("Failed to fetch analysis paths"); }
-          })();
-          break;
-        }
-        case "methods": {
-          (async () => {
-            try {
-              const res = await fetch(`${API}/analysis/methods`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
-              const json = await res.json();
-              const methods: AttackMethod[] = json?.methods || [];
-              if (!Array.isArray(methods) || methods.length === 0) { alert("No attack methods suggested for current Entry→Target paths."); return; }
-              const text = methods.map((m, i) => `${i + 1}. [${m.severity}] ${m.title} — ${m.description}`).join("\n\n");
-              alert(`Suggested Attack Methods (demo):\n\n${text}`);
-            } catch (e) { console.error(e); alert("Failed to fetch attack methods"); }
           })();
           break;
         }

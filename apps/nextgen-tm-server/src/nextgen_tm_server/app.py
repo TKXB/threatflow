@@ -203,86 +203,6 @@ def analysis_paths(req: AnalyzeRequest) -> dict[str, Any]:
     return {"ok": True, "paths": scored[:k]}
 
 
-class MethodsRequest(BaseModel):
-    nodes: List[Node]
-    edges: List[Edge]
-    k: int = 10
-    maxDepth: int = 20
-
-
-@app.post("/analysis/methods")
-def analysis_methods(req: MethodsRequest) -> dict[str, Any]:
-    # 复用 paths 结果，然后用启发式规则生成建议
-    base = analysis_paths(AnalyzeRequest(nodes=req.nodes, edges=req.edges, k=req.k, maxDepth=req.maxDepth))
-    paths = base["paths"]
-
-    def text_includes(val: object, kw: str) -> bool:
-        return kw.lower() in str(val or "").lower()
-
-    id_to_node = {n.id: n for n in req.nodes}
-    methods: list[dict[str, Any]] = []
-    for p in paths:
-        first = id_to_node.get(p["nodeIds"][0])
-        last = id_to_node.get(p["nodeIds"][-1])
-        first_tech = str(((first and first.data) or {}).get("technology") or _get_label(first or Node(id=""))).lower()
-        last_tech = str(((last and last.data) or {}).get("technology") or _get_label(last or Node(id=""))).lower()
-        last_label = str(((last and last.data) or {}).get("label") or _get_label(last or Node(id=""))).lower()
-
-        is_uart = "uart" in first_tech or text_includes((first and first.data or {}).get("label"), "uart")
-        is_linux = "linux" in last_tech or "linux" in last_label
-        is_spi = "spi" in last_tech or "spi" in last_label
-
-        if is_uart and is_linux:
-            methods.append({
-                "id": "uart-linux-bruteforce",
-                "title": "Crack UART console password",
-                "description": "Attempt password brute-force or default credentials on the UART login to obtain shell access.",
-                "severity": "high",
-                "confidence": 0.7,
-                "matchedPath": {"nodeIds": p["nodeIds"], "labels": p["labels"]},
-            })
-            methods.append({
-                "id": "uart-bootloader-interrupt",
-                "title": "Interrupt bootloader via UART and spawn root shell",
-                "description": "Interrupt U-Boot/bootloader over UART, modify bootargs/init to obtain a privileged shell.",
-                "severity": "high",
-                "confidence": 0.6,
-                "matchedPath": {"nodeIds": p["nodeIds"], "labels": p["labels"]},
-            })
-
-        if is_uart and is_spi:
-            methods.append({
-                "id": "uart-linux-spi-dump",
-                "title": "Pivot from UART shell to dump SPI device",
-                "description": "Use UART-obtained shell on Linux to access SPI device nodes and dump contents.",
-                "severity": "high",
-                "confidence": 0.65,
-                "matchedPath": {"nodeIds": p["nodeIds"], "labels": p["labels"]},
-            })
-
-        if "http" in " ".join(p["labels"]).lower():
-            methods.append({
-                "id": "web-credential-stuffing",
-                "title": "Credential stuffing via exposed HTTP endpoint",
-                "description": "Leverage reused credentials against exposed HTTP services en route to the target.",
-                "severity": "medium",
-                "confidence": 0.4,
-                "matchedPath": {"nodeIds": p["nodeIds"], "labels": p["labels"]},
-            })
-
-    # 简单去重：按 id+终点
-    seen: set[str] = set()
-    dedup: list[dict[str, Any]] = []
-    for m in methods:
-        key = f"{m['id']}::{m['matchedPath']['nodeIds'][-1] if m.get('matchedPath') else ''}"
-        if key in seen:
-            continue
-        seen.add(key)
-        dedup.append(m)
-
-    return {"ok": True, "methods": dedup[: int(req.k)]}
-
-
 # ===== LLM (LiteLLM/OpenAI 兼容代理) 集成 =====
 
 class LlmConfig(BaseModel):
@@ -291,7 +211,11 @@ class LlmConfig(BaseModel):
     model: str | None = None    # 例如 gpt-4o-mini
 
 
-class LlmMethodsRequest(MethodsRequest):
+class LlmMethodsRequest(BaseModel):
+    nodes: List[Node]
+    edges: List[Edge]
+    k: int = 10
+    maxDepth: int = 20
     llm: LlmConfig | None = None
     prompt: str | None = None
 
