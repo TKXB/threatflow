@@ -19,6 +19,7 @@ import PropertiesPanel from "./PropertiesPanel";
 import LlmRisksPanel from "./components/LlmRisksPanel";
 import { buildOtmFromGraph, applyOtmToGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
+import { trackEvent } from "./utils/analytics";
 import ContextMenu from "./components/ContextMenu";
 import WelcomeModal from "./components/WelcomeModal";
 import ActorNode from "./nodes/ActorNode";
@@ -304,6 +305,7 @@ export default function ThreatModelingApp() {
       const key = ev?.detail?.key;
       switch (key) {
         case "llm": {
+          trackEvent("ThreatModeling", "AI Analysis", "Risks");
           setRisksLoading(true);
           (async () => {
             try {
@@ -332,10 +334,12 @@ export default function ThreatModelingApp() {
           break;
         }
         case "export-otm": {
+          trackEvent("ThreatModeling", "Export", "OTM");
           exportOtm();
           break;
         }
         case "export-threagile": {
+          trackEvent("ThreatModeling", "Export", "Threagile");
           exportThreagile();
           break;
         }
@@ -348,6 +352,7 @@ export default function ThreatModelingApp() {
           break;
         }
         case "export-report": {
+          trackEvent("ThreatModeling", "Export", "Report");
           const payload = {
             modelTitle: "Model",
             generatedAt: new Date().toISOString(),
@@ -369,6 +374,7 @@ export default function ThreatModelingApp() {
   }, [nodes, edges, API, llmBaseUrl, llmApiKey, llmModel, acceptedFindings]);
 
   function acceptRisk(r: any) {
+    trackEvent("ThreatModeling", "Risk Accept", r.title || "Unknown");
     setAcceptedFindings((prev) => {
       const id = r.id || `${(r.title || "risk").toString().slice(0, 24).replace(/\s+/g, "-").toLowerCase()}-${Date.now()}`;
       const next = prev.concat({ ...r, id });
@@ -377,6 +383,8 @@ export default function ThreatModelingApp() {
   }
 
   function dismissRisk(idx: number) {
+    const risk = llmRisks?.[idx];
+    trackEvent("ThreatModeling", "Risk Dismiss", risk?.title || "Unknown");
     setLlmRisks((prev) => {
       if (!prev) return prev;
       const copy = prev.slice();
@@ -386,6 +394,7 @@ export default function ThreatModelingApp() {
   }
 
   function exportOtm() {
+    trackEvent("ThreatModeling", "Export", "OTM");
     const otm = buildOtmFromGraph(nodes, edges, "Model");
     const blob = new Blob([JSON.stringify(otm, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -397,6 +406,7 @@ export default function ThreatModelingApp() {
   }
 
   function exportThreagile() {
+    trackEvent("ThreatModeling", "Export", "Threagile");
     const yaml = buildThreagileYaml(nodes, edges, "Model");
     const blob = new Blob([yaml], { type: "text/yaml" });
     const url = URL.createObjectURL(blob);
@@ -471,6 +481,7 @@ export default function ThreatModelingApp() {
   }, [nodes, edges]);
 
   const clearAll = useCallback(() => {
+    trackEvent("ThreatModeling", "Clear", "Canvas");
     setNodes([] as any);
     setEdges([] as any);
   }, []);
@@ -479,6 +490,7 @@ export default function ThreatModelingApp() {
 
   const saveModel = useCallback(() => {
     try {
+      trackEvent("ThreatModeling", "Save", "Model");
       const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
       const blob = new Blob([JSON.stringify(otm, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);

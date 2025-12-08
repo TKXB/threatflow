@@ -26,6 +26,7 @@ import AssetNode from "./nodes/AssetNode";
 import type { ScoredPath } from "./utils/pathAnalysis";
 import { buildOtmFromGraph, applyOtmToGraph } from "./utils/otmMapper";
 import { buildThreagileYaml } from "./utils/threagileMapper";
+import { trackEvent } from "./utils/analytics";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import WelcomeModal from "./components/WelcomeModal";
 import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, Minimize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw } from "lucide-react";
@@ -483,6 +484,7 @@ export default function AttackPathApp() {
           break;
         }
         case "llm-tara": {
+          trackEvent("AttackPath", "AI Analysis", "TARA");
           setTaraLoading(true);
           (async () => {
             try {
@@ -502,16 +504,19 @@ export default function AttackPathApp() {
           break;
         }
         case "export-otm": {
+          trackEvent("AttackPath", "Export", "OTM");
           const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
           download("model.otm.json", JSON.stringify(otm, null, 2), "application/json");
           break;
         }
         case "export-threagile": {
+          trackEvent("AttackPath", "Export", "Threagile");
           const yaml = buildThreagileYaml(nodes as any, edges as any, "Model");
           download("model.threagile.yaml", yaml, "text/yaml");
           break;
         }
         case "export-report": {
+          trackEvent("AttackPath", "Export", "Report");
           (async () => {
             const paths = lastScores ?? (async () => {
               const res = await fetch(`${API}/analysis/paths`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
@@ -1117,6 +1122,7 @@ export default function AttackPathApp() {
   }, [nodes, edges]);
 
   const clearAll = useCallback(() => {
+    trackEvent("AttackPath", "Clear", "Canvas");
     setNodes([] as any);
     setEdges([] as any);
   }, []);
@@ -1133,16 +1139,18 @@ export default function AttackPathApp() {
   // zoom controls removed per request
 
   const exportOtm = useCallback(() => {
+    trackEvent("AttackPath", "Export", "OTM");
     const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
     download("model.otm.json", JSON.stringify(otm, null, 2), "application/json");
   }, [nodes, edges]);
 
   const exportThreagile = useCallback(() => {
+    trackEvent("AttackPath", "Export", "Threagile");
     const yaml = buildThreagileYaml(nodes as any, edges as any, "Model");
     download("model.threagile.yaml", yaml, "text/yaml");
   }, [nodes, edges]);
 
-  const saveModel = useCallback(() => { try { const otm = buildOtmFromGraph(nodes as any, edges as any, "Model"); download("model.save.json", JSON.stringify(otm, null, 2), "application/json"); } catch {} }, [nodes, edges]);
+  const saveModel = useCallback(() => { try { trackEvent("AttackPath", "Save", "Model"); const otm = buildOtmFromGraph(nodes as any, edges as any, "Model"); download("model.save.json", JSON.stringify(otm, null, 2), "application/json"); } catch {} }, [nodes, edges]);
   const closeDiagram = useCallback(() => { setNodes([] as any); setEdges([] as any); }, []);
 
   const showShortcuts = useCallback(() => {
