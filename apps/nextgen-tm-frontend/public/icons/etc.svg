@@ -1,0 +1,50 @@
+<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 主背景渐变，参考卡片整体蓝色 -->
+    <linearGradient id="mainBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E7BD8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1062B5;stop-opacity:1" />
+    </linearGradient>
+    <!-- 顶部深色细线的渐变 -->
+    <linearGradient id="topLine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D4F96;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0A3F7A;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 卡片主体 -->
+  <rect x="10" y="10" width="280" height="180" rx="26" ry="26" fill="url(#mainBlue)" />
+
+  <!-- 顶部略深的横线（而不是整块色条） -->
+  <rect x="10" y="54" width="280" height="2" fill="url(#topLine)" opacity="0.9" />
+
+  <!-- 中间的 ETC 字样，参考图片用粗体大写，居中略偏上 -->
+  <g transform="translate(150, 108)">
+    <text
+      x="0"
+      y="0"
+      text-anchor="middle"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="70"
+      font-weight="bold"
+      fill="#FFFFFF"
+      letter-spacing="10"
+      dominant-baseline="middle"
+    >
+      ETC
+    </text>
+  </g>
+
+  <!-- 底部说明文字：ELECTRONIC TOLL -->
+  <text
+    x="150"
+    y="168"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="12"
+    fill="#FFFFFF"
+    text-anchor="middle"
+    letter-spacing="2"
+  >
+    ELECTRONIC TOLL
+  </text>
+</svg>

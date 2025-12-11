@@ -1,0 +1,11 @@
+{
+  "id": "asset.auto.etc",
+  "label": "ETC",
+  "icon": "/icons/etc.svg",
+  "type": "asset",
+  "technology": "etc",
+  "priority": 20,
+  "domain": "Automotive"
+}
+
+
