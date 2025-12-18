@@ -22,7 +22,7 @@ export default function App() {
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <AppHeader
           project="Starter Project"
-          title={mode === "tm" ? "Threat Modeling" : "Attack Path"}
+          title={mode === "tm" ? "Threat Modeling" : "Attack Path Analysis"}
           mode={mode}
           onSelectMode={setMode}
           onMenuAction={(key) => {

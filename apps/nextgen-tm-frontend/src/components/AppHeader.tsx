@@ -3,7 +3,7 @@ import { renderWeChatLogin } from "../auth/wechatLogin";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
-export default function AppHeader({ project = "Starter Project", title = "Attack Path", count, mode, onSelectMode, onMenuAction }: { project?: string; title?: string; count?: number; mode: "tm" | "ap"; onSelectMode: (m: "tm" | "ap") => void; onMenuAction?: (key: string) => void }) {
+export default function AppHeader({ project = "Starter Project", title = "Attack Path Analysis", count, mode, onSelectMode, onMenuAction }: { project?: string; title?: string; count?: number; mode: "tm" | "ap"; onSelectMode: (m: "tm" | "ap") => void; onMenuAction?: (key: string) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
@@ -111,7 +111,7 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
       <div className="header-left" data-testid="header_left_section_wrapper">
         <div className="header-tabs">
           <button type="button" className={`tab-btn${mode === "tm" ? " active" : ""}`} onClick={() => onSelectMode("tm")}>Threat Modeling</button>
-          <button type="button" className={`tab-btn${mode === "ap" ? " active" : ""}`} onClick={() => onSelectMode("ap")}>Attack Path</button>
+          <button type="button" className={`tab-btn${mode === "ap" ? " active" : ""}`} onClick={() => onSelectMode("ap")}>Attack Path Analysis</button>
         </div>
       </div>
       <div className="header-center">

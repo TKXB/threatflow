@@ -964,7 +964,7 @@ export default function AttackPathApp() {
   const SidebarAP = useMemo(
     () => (
       <div className="sidebar" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <h3>Attack Path Palette</h3>
+        <h3>Attack Path Analysis Palette</h3>
         <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
           {paletteError && (
             <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
@@ -1343,7 +1343,7 @@ export default function AttackPathApp() {
         open={showWelcome}
         onClose={() => setShowWelcome(false)}
         title="Get started"
-        description="Start with templates showcasing Attack Path modeling and analysis."
+        description="Start with templates showcasing Attack Path Analysis."
         primaryText="Start"
       />
       <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
