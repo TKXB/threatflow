@@ -28,6 +28,7 @@ jobs:
       - name: Build frontend
         env:
           VITE_NEXTGEN_API: "https://ap.iotsploit.org"
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
         run: npm --prefix apps/nextgen-tm-frontend run build
 
       - name: Install PM2 globally
