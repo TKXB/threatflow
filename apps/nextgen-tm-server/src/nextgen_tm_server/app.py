@@ -22,13 +22,8 @@ from .llm.templates import (
     build_tm_risks_schema,
     default_tm_risks_user_prompt,
 )
-from .db import create_db_and_tables
-from .routers import auth_google
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await create_db_and_tables()
     yield
 
 
@@ -43,9 +38,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(auth_google.router, prefix="/auth", tags=["auth"])
-
 
 class Node(BaseModel):
     id: str
