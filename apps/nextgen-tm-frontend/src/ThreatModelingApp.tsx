@@ -26,7 +26,7 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
-import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon, Upload, RefreshCw, RotateCcw } from "lucide-react";
+import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon, Upload, RefreshCw, RotateCcw, Search } from "lucide-react";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -110,6 +110,7 @@ export default function ThreatModelingApp() {
   });
   const [paletteConfig, setPaletteConfig] = useState<TmPaletteConfig | null>(null);
   const [paletteError, setPaletteError] = useState<string | null>(null);
+  const [paletteSearch, setPaletteSearch] = useState<string>("");
   const nodeTypes = useMemo(
     () => ({
       actor: ActorNode,
@@ -639,9 +640,43 @@ export default function ThreatModelingApp() {
   }
 
   const SidebarTM = useMemo(
-    () => (
+    () => {
+      const q = paletteSearch.trim().toLowerCase();
+      const filteredSections = (paletteConfig?.sections || [])
+        .map((section) => {
+          if (!q) return section;
+          const items = (section.items || []).filter((it) => {
+            const label = String(it.label || "").toLowerCase();
+            const type = String(it.type || "").toLowerCase();
+            const tech = String((it as any).technology || "").toLowerCase();
+            return label.includes(q) || type.includes(q) || tech.includes(q);
+          });
+          return { ...section, items };
+        })
+        .filter((section) => !q || (section.items && section.items.length > 0));
+      return (
       <div className="sidebar" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <h3>Palette</h3>
+        <div style={{ position: "relative", marginBottom: 8 }}>
+          <Search size={14} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }} />
+          <input
+            type="text"
+            value={paletteSearch}
+            onChange={(e) => setPaletteSearch(e.target.value)}
+            placeholder="Search palette..."
+            style={{ width: "100%", padding: "6px 26px 6px 28px", fontSize: 12, border: "1px solid #e5e7eb", borderRadius: 6, outline: "none", boxSizing: "border-box" }}
+          />
+          {paletteSearch && (
+            <button
+              type="button"
+              onClick={() => setPaletteSearch("")}
+              title="Clear"
+              style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", color: "#9ca3af", padding: 2, display: "flex", alignItems: "center" }}
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
         <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
           {paletteError && (
             <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
@@ -649,10 +684,13 @@ export default function ThreatModelingApp() {
           {!paletteError && !paletteConfig && (
             <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
           )}
-          {paletteConfig && paletteConfig.sections?.map((section, si) => (
+          {paletteConfig && q && filteredSections.length === 0 && (
+            <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>No matching items.</div>
+          )}
+          {paletteConfig && filteredSections.map((section, si) => (
             <div key={`sec-${si}`} className="disclosure-section">
               <div
-                className={`disclosure-header ${openSections.includes(section.title) ? "open" : ""}`}
+                className={`disclosure-header ${q || openSections.includes(section.title) ? "open" : ""}`}
                 role="button"
                 tabIndex={0}
                 onClick={() => toggleSection(section.title)}
@@ -661,7 +699,7 @@ export default function ThreatModelingApp() {
                 <span className="disclosure-title">{section.title}</span>
                 <ChevronRight className="disclosure-chevron" size={16} />
               </div>
-              <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
+              <div className={`disclosure-content ${q || openSections.includes(section.title) ? "open" : ""}`}>
                 {section.items?.map((it, ii) => (
                   <div
                     key={`item-${si}-${ii}-${it.label}`}
@@ -692,8 +730,9 @@ export default function ThreatModelingApp() {
           <input ref={paletteFileInputRef} onChange={onPaletteFileSelected} type="file" accept="application/json" style={{ display: "none" }} />
         </div>
       </div>
-    ),
-    [paletteConfig, paletteError, openSections, toggleSection, handleSectionKeyDown]
+      );
+    },
+    [paletteConfig, paletteError, openSections, toggleSection, handleSectionKeyDown, paletteSearch]
   );
 
   // Toolbar removed: options moved to header dropdown

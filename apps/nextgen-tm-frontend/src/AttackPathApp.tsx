@@ -29,7 +29,7 @@ import { buildThreagileYaml } from "./utils/threagileMapper";
 import { trackEvent } from "./utils/analytics";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import WelcomeModal from "./components/WelcomeModal";
-import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, Minimize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw } from "lucide-react";
+import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, Minimize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw, Search } from "lucide-react";
 import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
 import { applyTaraDerivations } from "./utils/taraCalc";
@@ -120,6 +120,7 @@ export default function AttackPathApp() {
   const [showLlmSettings, setShowLlmSettings] = useState(false);
   const [paletteConfig, setPaletteConfig] = useState<PaletteConfig | null>(null);
   const [paletteError, setPaletteError] = useState<string | null>(null);
+  const [paletteSearch, setPaletteSearch] = useState<string>("");
   const [openSections, setOpenSections] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showTaraFullscreen, setShowTaraFullscreen] = useState(false);
@@ -962,9 +963,46 @@ export default function AttackPathApp() {
   }, []);
 
   const SidebarAP = useMemo(
-    () => (
+    () => {
+      const q = paletteSearch.trim().toLowerCase();
+      const matchItem = (it: PaletteItem) => {
+        if (!q) return true;
+        const label = String(it.label || "").toLowerCase();
+        const type = String(it.type || "").toLowerCase();
+        const tech = String((it as any).technology || "").toLowerCase();
+        const domain = String((it as any).domain || "").toLowerCase();
+        return label.includes(q) || type.includes(q) || tech.includes(q) || domain.includes(q);
+      };
+      const filteredSections = (paletteConfig?.sections || [])
+        .map((section) => {
+          if (!q) return section;
+          const items = (section.items || []).filter(matchItem);
+          return { ...section, items };
+        })
+        .filter((section) => !q || (section.items && section.items.length > 0));
+      return (
       <div className="sidebar" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <h3>Attack Path Analysis Palette</h3>
+        <div style={{ position: "relative", marginBottom: 8 }}>
+          <Search size={14} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }} />
+          <input
+            type="text"
+            value={paletteSearch}
+            onChange={(e) => setPaletteSearch(e.target.value)}
+            placeholder="Search palette..."
+            style={{ width: "100%", padding: "6px 26px 6px 28px", fontSize: 12, border: "1px solid #e5e7eb", borderRadius: 6, outline: "none", boxSizing: "border-box" }}
+          />
+          {paletteSearch && (
+            <button
+              type="button"
+              onClick={() => setPaletteSearch("")}
+              title="Clear"
+              style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", color: "#9ca3af", padding: 2, display: "flex", alignItems: "center" }}
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
         <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
           {paletteError && (
             <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{paletteError}</div>
@@ -972,10 +1010,13 @@ export default function AttackPathApp() {
           {!paletteError && !paletteConfig && (
             <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>Loading palette...</div>
           )}
-          {paletteConfig && paletteConfig.sections?.map((section, si) => (
+          {paletteConfig && q && filteredSections.length === 0 && (
+            <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>No matching items.</div>
+          )}
+          {paletteConfig && filteredSections.map((section, si) => (
             <div key={`sec-${si}`} className="disclosure-section">
               <div
-                className={`disclosure-header ${openSections.includes(section.title) ? "open" : ""}`}
+                className={`disclosure-header ${q || openSections.includes(section.title) ? "open" : ""}`}
                 role="button"
                 tabIndex={0}
                 onClick={() => toggleSection(section.title)}
@@ -984,7 +1025,7 @@ export default function AttackPathApp() {
                 <span className="disclosure-title">{section.title}</span>
                 <ChevronRight className="disclosure-chevron" size={16} />
               </div>
-              <div className={`disclosure-content ${openSections.includes(section.title) ? "open" : ""}`}>
+              <div className={`disclosure-content ${q || openSections.includes(section.title) ? "open" : ""}`}>
                 {section.title === "Assets"
                   ? (() => {
                       const items = Array.isArray(section.items) ? section.items : [];
@@ -1035,7 +1076,7 @@ export default function AttackPathApp() {
                         return (
                           <div key={`grp-${gk}`} className="disclosure-section" style={{ marginLeft: 10 }}>
                             <div
-                              className={`disclosure-header ${openSections.includes(groupKey) ? "open" : ""}`}
+                              className={`disclosure-header ${q || openSections.includes(groupKey) ? "open" : ""}`}
                               style={{ paddingLeft: 8 }}
                               role="button"
                               tabIndex={0}
@@ -1045,7 +1086,7 @@ export default function AttackPathApp() {
                               <span className="disclosure-title">{gk}</span>
                               <ChevronRight className="disclosure-chevron" size={16} />
                             </div>
-                            <div className={`disclosure-content ${openSections.includes(groupKey) ? "open" : ""}`} style={{ marginLeft: 10 }}>
+                            <div className={`disclosure-content ${q || openSections.includes(groupKey) ? "open" : ""}`} style={{ marginLeft: 10 }}>
                               {groupItems.map((it, ii) => renderItem(it, `item-${si}-${gk}-${ii}-${it.label}`))}
                             </div>
                           </div>
@@ -1084,8 +1125,9 @@ export default function AttackPathApp() {
           <input ref={fileInputRef} onChange={onFileSelected} type="file" accept="application/json" style={{ display: "none" }} />
         </div>
       </div>
-    ),
-    [paletteConfig, paletteError, openSections, toggleSection, handleSectionKeyDown]
+      );
+    },
+    [paletteConfig, paletteError, openSections, toggleSection, handleSectionKeyDown, paletteSearch]
   );
 
   // Toolbar removed – actions moved to header dropdown
