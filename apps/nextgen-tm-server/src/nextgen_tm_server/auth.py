@@ -1,8 +1,11 @@
 import os
 import time
+import logging
 import httpx
 from jose import jwt, JWTError
 from fastapi import Request, HTTPException
+
+logger = logging.getLogger("nextgen_tm_server")
 
 CLERK_JWKS_URL = os.getenv(
     "CLERK_JWKS_URL",
@@ -33,17 +36,20 @@ async def get_current_user_id(request: Request) -> str:
     """
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
+        logger.warning("Auth: missing or malformed Authorization header")
         raise HTTPException(status_code=401, detail="Missing token")
     token = auth[7:]
 
     try:
         jwks = await _fetch_jwks()
         header = jwt.get_unverified_header(token)
+        logger.info("Auth: token kid=%s, alg=%s", header.get("kid"), header.get("alg"))
         key = next(
             (k for k in jwks["keys"] if k["kid"] == header.get("kid")),
             None,
         )
         if not key:
+            logger.warning("Auth: unknown kid=%s, available kids=%s", header.get("kid"), [k["kid"] for k in jwks["keys"]])
             raise HTTPException(status_code=401, detail="Unknown signing key")
 
         payload = jwt.decode(
@@ -54,7 +60,10 @@ async def get_current_user_id(request: Request) -> str:
         )
         user_id = payload.get("sub")
         if not user_id:
+            logger.warning("Auth: token valid but no sub claim")
             raise HTTPException(status_code=401, detail="No sub in token")
+        logger.info("Auth: verified user_id=%s", user_id)
         return user_id
     except JWTError as e:
+        logger.warning("Auth: JWT verification failed: %s", e)
         raise HTTPException(status_code=401, detail=str(e))
