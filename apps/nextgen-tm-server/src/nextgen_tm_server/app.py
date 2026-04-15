@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
 from typing import Any, Dict, List
 import os
 import json
@@ -10,9 +14,11 @@ from contextlib import asynccontextmanager
 
 import httpx
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from supabase import create_client
+from .auth import get_current_user_id
 from .llm.templates import (
     build_attack_methods_schema,
     default_methods_user_prompt,
@@ -569,4 +575,59 @@ def get_palette_plugins() -> dict[str, Any]:
         sections.append(prepare_section("Assets", all_assets))
 
     return {"ok": True, "sections": sections}
+
+
+# ---------- Supabase-backed LLM Settings ----------
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+
+def _get_supabase():
+    return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+
+class LlmSettingsBody(BaseModel):
+    baseUrl: str | None = None
+    apiKey: str | None = None
+    model: str | None = None
+
+
+@app.get("/llm-settings")
+async def get_llm_settings(request: Request):
+    user_id = await get_current_user_id(request)
+    sb = _get_supabase()
+    try:
+        result = sb.table("llm_settings").select("*").eq("user_id", user_id).execute()
+    except Exception:
+        result = None
+    if not result or not result.data or len(result.data) == 0:
+        return {
+            "baseUrl": "http://127.0.0.1:4000/v1",
+            "apiKey": "",
+            "model": "gpt-4o-mini",
+            "updatedAt": 0,
+        }
+    row = result.data[0]
+    return {
+        "baseUrl": row["base_url"],
+        "apiKey": row["api_key"],
+        "model": row["model"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+@app.put("/llm-settings")
+async def put_llm_settings(request: Request, body: LlmSettingsBody):
+    user_id = await get_current_user_id(request)
+    now = int(time.time())
+    sb = _get_supabase()
+    sb.table("llm_settings").upsert({
+        "user_id": user_id,
+        "base_url": body.baseUrl or "http://127.0.0.1:4000/v1",
+        "api_key": body.apiKey or "",
+        "model": body.model or "gpt-4o-mini",
+        "updated_at": now,
+    }).execute()
+    return {"ok": True, "updatedAt": now}
 

@@ -27,6 +27,7 @@ import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
 import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon, Upload, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { useLlmSettings } from "./hooks/useLlmSettings";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -88,11 +89,12 @@ export default function ThreatModelingApp() {
   const [selectedData, setSelectedData] = useState<Record<string, any> | undefined>(undefined);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; type: "node" | "edge"; id: string } | null>(null);
   const [openSections, setOpenSections] = useState<string[]>([]);
-  const [llmBaseUrl, setLlmBaseUrl] = useState<string>("http://127.0.0.1:4000/v1");
-  const [llmApiKey, setLlmApiKey] = useState<string>("");
-  const [llmModel, setLlmModel] = useState<string>("gpt-4o-mini");
-  const [showLlmSettings, setShowLlmSettings] = useState<boolean>(false);
-  const [settingsHydrated, setSettingsHydrated] = useState<boolean>(false);
+  const {
+    llmBaseUrl, llmApiKey, llmModel,
+    setLlmBaseUrl, setLlmApiKey, setLlmModel,
+    showLlmSettings, setShowLlmSettings,
+    saveLlmSettings, hydrated: settingsHydrated,
+  } = useLlmSettings();
   const [llmRisks, setLlmRisks] = useState<Array<any> | null>(null);
   const [risksLoading, setRisksLoading] = useState<boolean>(false);
   const [acceptedFindings, setAcceptedFindings] = useState<Array<any>>(() => {
@@ -125,9 +127,6 @@ export default function ThreatModelingApp() {
     nodes: "tf_tm_nodes",
     edges: "tf_tm_edges",
     idseq: "tf_tm_idseq",
-    llmBase: "tf_llm_base_url",
-    llmKey: "tf_llm_api_key",
-    llmModel: "tf_llm_model",
     findings: "tf_tm_findings",
     paletteJson: "tf_tm_palette_json",
   } as const;
@@ -146,16 +145,6 @@ export default function ThreatModelingApp() {
     return Math.max(1, maxNum + 1);
   }
 
-  // 显式保存 LLM 设置（与 AttackPathApp 对齐）
-  function saveLlmSettings() {
-    try {
-      localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
-      localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
-      localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
-    } catch {}
-    setShowLlmSettings(false);
-  }
-
   useEffect(() => {
     try {
       const savedNodes = safeParse<Node<any>[]>(localStorage.getItem(STORAGE_KEYS.nodes), []);
@@ -167,14 +156,7 @@ export default function ThreatModelingApp() {
         const storedId = safeParse<number | null>(localStorage.getItem(STORAGE_KEYS.idseq), null);
         setIdSeq(storedId ?? computeNextIdSeq(mapped as any));
       }
-      const savedLlmBase = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmBase), null);
-      const savedLlmKey = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmKey), null);
-      const savedLlmModel = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmModel), null);
-      if (savedLlmBase) setLlmBaseUrl(savedLlmBase);
-      if (savedLlmKey) setLlmApiKey(savedLlmKey);
-      if (savedLlmModel) setLlmModel(savedLlmModel);
     } catch {}
-    setSettingsHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -186,14 +168,9 @@ export default function ThreatModelingApp() {
       localStorage.setItem(STORAGE_KEYS.nodes, JSON.stringify(nodes));
       localStorage.setItem(STORAGE_KEYS.edges, JSON.stringify(edges));
       localStorage.setItem(STORAGE_KEYS.idseq, JSON.stringify(idSeq));
-      if (settingsHydrated) {
-        localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
-        localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
-        localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
-      }
       localStorage.setItem(STORAGE_KEYS.findings, JSON.stringify(acceptedFindings));
     } catch {}
-  }, [nodes, edges, idSeq, llmBaseUrl, llmApiKey, llmModel, acceptedFindings, settingsHydrated]);
+  }, [nodes, edges, idSeq, acceptedFindings]);
 
   // API base for server
   const API = (import.meta as any).env?.VITE_NEXTGEN_API || "";

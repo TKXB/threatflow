@@ -17,6 +17,9 @@ dependencies = [
   "fastapi-users[sqlalchemy]>=13.0",
   "aiosqlite>=0.19",
   "google-auth>=2.23",
+  "supabase>=2",
+  "python-jose[cryptography]>=3.3",
+  "python-dotenv>=1.0",
 ]
 
 [tool.setuptools.packages.find]

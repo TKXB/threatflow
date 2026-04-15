@@ -33,6 +33,7 @@ import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box
 import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
 import { applyTaraDerivations } from "./utils/taraCalc";
+import { useLlmSettings } from "./hooks/useLlmSettings";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -112,12 +113,13 @@ export default function AttackPathApp() {
   const [taraRows, setTaraRows] = useState<TaraRow[] | null>(null);
   const [taraLoading, setTaraLoading] = useState(false);
   const [taraMinimized, setTaraMinimized] = useState(false);
-  const [settingsHydrated, setSettingsHydrated] = useState(false);
   const API = (import.meta as any).env?.VITE_NEXTGEN_API || "";
-  const [llmBaseUrl, setLlmBaseUrl] = useState<string>("http://127.0.0.1:4000/v1");
-  const [llmApiKey, setLlmApiKey] = useState<string>("");
-  const [llmModel, setLlmModel] = useState<string>("gpt-4o-mini");
-  const [showLlmSettings, setShowLlmSettings] = useState(false);
+  const {
+    llmBaseUrl, llmApiKey, llmModel,
+    setLlmBaseUrl, setLlmApiKey, setLlmModel,
+    showLlmSettings, setShowLlmSettings,
+    saveLlmSettings, hydrated: settingsHydrated,
+  } = useLlmSettings();
   const [paletteConfig, setPaletteConfig] = useState<PaletteConfig | null>(null);
   const [paletteError, setPaletteError] = useState<string | null>(null);
   const [paletteSearch, setPaletteSearch] = useState<string>("");
@@ -153,9 +155,6 @@ export default function AttackPathApp() {
     nodes: "tf_attack_nodes",
     edges: "tf_attack_edges",
     idseq: "tf_attack_idseq",
-    llmBase: "tf_llm_base_url",
-    llmKey: "tf_llm_api_key",
-    llmModel: "tf_llm_model",
     paletteJson: "tf_palette_json",
   } as const;
 
@@ -175,16 +174,6 @@ export default function AttackPathApp() {
     return Math.max(1, maxNum + 1);
   }
 
-  // Persist LLM settings explicitly when clicking Save
-  function saveLlmSettings() {
-    try {
-      localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
-      localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
-      localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
-    } catch {}
-    setShowLlmSettings(false);
-  }
-
   useEffect(() => {
     try {
       const savedNodes = safeParse<Node<BasicNodeData>[]>(localStorage.getItem(STORAGE_KEYS.nodes), []);
@@ -196,13 +185,6 @@ export default function AttackPathApp() {
         const storedId = safeParse<number | null>(localStorage.getItem(STORAGE_KEYS.idseq), null);
         setIdSeq(storedId ?? computeNextIdSeq(mapped as any));
       }
-      const savedLlmBase = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmBase), null);
-      const savedLlmKey = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmKey), null);
-      const savedLlmModel = safeParse<string | null>(localStorage.getItem(STORAGE_KEYS.llmModel), null);
-      if (savedLlmBase) setLlmBaseUrl(savedLlmBase);
-      if (savedLlmKey) setLlmApiKey(savedLlmKey);
-      if (savedLlmModel) setLlmModel(savedLlmModel);
-      setSettingsHydrated(true);
     } catch {}
   }, []);
 
@@ -217,16 +199,6 @@ export default function AttackPathApp() {
       localStorage.setItem(STORAGE_KEYS.idseq, JSON.stringify(idSeq));
     } catch {}
   }, [nodes, edges, idSeq]);
-
-  useEffect(() => {
-    if (!settingsHydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.llmBase, JSON.stringify(llmBaseUrl));
-      // 注意：API Key 存在本地仅用于演示，不建议用于生产
-      localStorage.setItem(STORAGE_KEYS.llmKey, JSON.stringify(llmApiKey));
-      localStorage.setItem(STORAGE_KEYS.llmModel, JSON.stringify(llmModel));
-    } catch {}
-  }, [settingsHydrated, llmBaseUrl, llmApiKey, llmModel]);
 
   // ----- Palette loading chain: LocalStorage > Backend plugins > Default file -----
   async function loadPaletteFromLocal(): Promise<PaletteConfig | null> {
