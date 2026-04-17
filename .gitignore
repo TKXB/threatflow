@@ -22,6 +22,14 @@ node_modules/
 # OS
 .DS_Store
 
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# SQLite
+*.db
+
 # Artifacts
 artifacts/
 reports/
