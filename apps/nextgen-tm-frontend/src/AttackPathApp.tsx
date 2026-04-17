@@ -34,6 +34,7 @@ import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
 import { applyTaraDerivations } from "./utils/taraCalc";
 import { useLlmSettings } from "./hooks/useLlmSettings";
+import { useAuthFetch } from "./hooks/useAuthFetch";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -120,6 +121,7 @@ export default function AttackPathApp() {
     showLlmSettings, setShowLlmSettings,
     saveLlmSettings, hydrated: settingsHydrated,
   } = useLlmSettings();
+  const authFetch = useAuthFetch();
   const [paletteConfig, setPaletteConfig] = useState<PaletteConfig | null>(null);
   const [paletteError, setPaletteError] = useState<string | null>(null);
   const [paletteSearch, setPaletteSearch] = useState<string>("");
@@ -214,7 +216,7 @@ export default function AttackPathApp() {
     async function loadPaletteFromBackend(): Promise<PaletteConfig | null> {
     try {
       // Always use /api prefix so requests go through Nginx/Vite proxy
-      const res = await fetch(`/api/palette/plugins`, { headers: { "accept": "application/json" } });
+      const res = await authFetch(`/api/palette/plugins`, { headers: { "accept": "application/json" } });
       const json = await res.json();
       const sections = Array.isArray(json?.sections) ? json.sections : [];
       if (sections.length > 0) return { sections } as PaletteConfig;
@@ -433,7 +435,7 @@ export default function AttackPathApp() {
         case "topk": {
           (async () => {
             try {
-              const res = await fetch(`${API}/analysis/paths`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
+              const res = await authFetch(`${API}/analysis/paths`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
               const json = await res.json();
               const paths: ScoredPath[] = json?.paths || [];
               setLastScores(paths);
@@ -447,7 +449,7 @@ export default function AttackPathApp() {
         case "llm": {
           (async () => {
             try {
-              const res = await fetch(`${API}/analysis/llm/methods`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }) });
+              const res = await authFetch(`${API}/analysis/llm/methods`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }) });
               const json = await res.json();
               const methods: LlmAttackMethod[] = (json?.methods || []) as LlmAttackMethod[];
               if (!Array.isArray(methods) || methods.length === 0) { alert("No LLM-suggested methods."); setLlmMethods([]); return; }
@@ -461,7 +463,7 @@ export default function AttackPathApp() {
           setTaraLoading(true);
           (async () => {
             try {
-              const res = await fetch(`${API}/analysis/llm/tara`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 50, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }) });
+              const res = await authFetch(`${API}/analysis/llm/tara`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 50, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }) });
               const json = await res.json();
               const rawRows: TaraRow[] = (json?.rows || []) as TaraRow[];
               const rows = applyTaraDerivations(rawRows);
@@ -492,7 +494,7 @@ export default function AttackPathApp() {
           trackEvent("AttackPath", "Export", "Report");
           (async () => {
             const paths = lastScores ?? (async () => {
-              const res = await fetch(`${API}/analysis/paths`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
+              const res = await authFetch(`${API}/analysis/paths`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }) });
               const json = await res.json();
               return (json?.paths || []) as ScoredPath[];
             })();
@@ -506,7 +508,7 @@ export default function AttackPathApp() {
     };
     window.addEventListener("ap-menu", handler as any);
     return () => window.removeEventListener("ap-menu", handler as any);
-  }, [nodes, edges, API, lastScores, llmBaseUrl, llmApiKey, llmModel]);
+  }, [nodes, edges, API, lastScores, llmBaseUrl, llmApiKey, llmModel, authFetch]);
 
   const toggleSection = useCallback((title: string) => {
     setOpenSections((prev) => prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]);
@@ -835,7 +837,7 @@ export default function AttackPathApp() {
   async function runMockAnalysisAndHighlight() {
     setAnalyzing(true);
     try {
-      const res = await fetch(`${API}/analysis/paths`, {
+      const res = await authFetch(`${API}/analysis/paths`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ nodes, edges, k: 10, maxDepth: 20 }),
@@ -1476,7 +1478,7 @@ export default function AttackPathApp() {
                 onReanalyzeRow={(rowIndex) => {
                   (async () => {
                     try {
-                      const res = await fetch(`${API}/analysis/llm/tara`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 1, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }) });
+                      const res = await authFetch(`${API}/analysis/llm/tara`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nodes, edges, k: 1, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }) });
                       const json = await res.json();
                       const newRows: any[] = (json?.rows || []);
                       if (!Array.isArray(newRows) || newRows.length === 0) return;

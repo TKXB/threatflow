@@ -28,6 +28,7 @@ import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
 import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon, Upload, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { useLlmSettings } from "./hooks/useLlmSettings";
+import { useAuthFetch } from "./hooks/useAuthFetch";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -95,6 +96,7 @@ export default function ThreatModelingApp() {
     showLlmSettings, setShowLlmSettings,
     saveLlmSettings, hydrated: settingsHydrated,
   } = useLlmSettings();
+  const authFetch = useAuthFetch();
   const [llmRisks, setLlmRisks] = useState<Array<any> | null>(null);
   const [risksLoading, setRisksLoading] = useState<boolean>(false);
   const [acceptedFindings, setAcceptedFindings] = useState<Array<any>>(() => {
@@ -188,7 +190,7 @@ export default function ThreatModelingApp() {
 
   async function loadPaletteFromBackend(): Promise<TmPaletteConfig | null> {
     try {
-      const res = await fetch(`${API}/api/tm/palette/plugins`, { headers: { "accept": "application/json" } });
+      const res = await authFetch(`${API}/api/tm/palette/plugins`, { headers: { "accept": "application/json" } });
       const json = await res.json();
       const sections = Array.isArray(json?.sections) ? json.sections : [];
       if (sections.length > 0) return { sections } as TmPaletteConfig;
@@ -287,7 +289,7 @@ export default function ThreatModelingApp() {
           setRisksLoading(true);
           (async () => {
             try {
-              const res = await fetch(`${API}/analysis/tm/llm/risks`, {
+              const res = await authFetch(`${API}/analysis/tm/llm/risks`, {
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({ nodes, edges, k: 20, maxDepth: 20, llm: { baseUrl: llmBaseUrl, apiKey: llmApiKey, model: llmModel } }),
@@ -349,7 +351,7 @@ export default function ThreatModelingApp() {
     }
     window.addEventListener("ap-menu", handler as any);
     return () => window.removeEventListener("ap-menu", handler as any);
-  }, [nodes, edges, API, llmBaseUrl, llmApiKey, llmModel, acceptedFindings]);
+  }, [nodes, edges, API, llmBaseUrl, llmApiKey, llmModel, acceptedFindings, authFetch]);
 
   function acceptRisk(r: any) {
     trackEvent("ThreatModeling", "Risk Accept", r.title || "Unknown");

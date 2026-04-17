@@ -45,6 +45,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Paths that don't require authentication
+_PUBLIC_PATHS = {"/", "/docs", "/openapi.json", "/redoc", "/health"}
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    """Require a valid Clerk JWT on all routes except public paths."""
+    path = request.url.path
+    if path in _PUBLIC_PATHS or request.method == "OPTIONS":
+        return await call_next(request)
+    try:
+        await get_current_user_id(request)
+    except HTTPException as exc:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return await call_next(request)
+
 class Node(BaseModel):
     id: str
     type: str | None = None

@@ -1,5 +1,5 @@
 import { Workflow, Bell, ChevronDown } from "lucide-react";
-import { Show, SignInButton, UserButton } from "@clerk/react";
+import { UserButton } from "@clerk/react";
 import { useEffect, useRef, useState } from "react";
 
 export default function AppHeader({ project = "Starter Project", title = "Attack Path Analysis", count, mode, onSelectMode, onMenuAction }: { project?: string; title?: string; count?: number; mode: "tm" | "ap"; onSelectMode: (m: "tm" | "ap") => void; onMenuAction?: (key: string) => void }) {
@@ -80,12 +80,7 @@ export default function AppHeader({ project = "Starter Project", title = "Attack
           <Bell size={16} />
         </button>
         <div className="v-sep" role="none" />
-        <Show when="signed-out">
-          <SignInButton />
-        </Show>
-        <Show when="signed-in">
-          <UserButton />
-        </Show>
+        <UserButton />
       </div>
     </div>
   );
