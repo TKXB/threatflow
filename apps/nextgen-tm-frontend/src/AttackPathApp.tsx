@@ -29,12 +29,14 @@ import { buildThreagileYaml } from "./utils/threagileMapper";
 import { trackEvent } from "./utils/analytics";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import WelcomeModal from "./components/WelcomeModal";
-import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, Minimize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { ChevronRight, Wifi, Globe, Cable, Database as DbIcon, User, Shield, Box, Cpu, Server, Maximize2, Minimize2, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Download as DownloadIcon, Save as SaveIcon, Bot, Upload, RefreshCw, RotateCcw, Search, FolderOpen } from "lucide-react";
 import TaraTable from "./components/TaraTable";
 import type { TaraRow } from "./types/tara";
 import { applyTaraDerivations } from "./utils/taraCalc";
 import { useLlmSettings } from "./hooks/useLlmSettings";
 import { useAuthFetch } from "./hooks/useAuthFetch";
+import { useDiagramStorage } from "./hooks/useDiagramStorage";
+import DiagramManager from "./components/DiagramManager";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -122,6 +124,8 @@ export default function AttackPathApp() {
     saveLlmSettings, hydrated: settingsHydrated,
   } = useLlmSettings();
   const authFetch = useAuthFetch();
+  const diagramStorage = useDiagramStorage("attack_path");
+  const [diagramManagerOpen, setDiagramManagerOpen] = useState<false | "save" | "open">(false);
   const [paletteConfig, setPaletteConfig] = useState<PaletteConfig | null>(null);
   const [paletteError, setPaletteError] = useState<string | null>(null);
   const [paletteSearch, setPaletteSearch] = useState<string>("");
@@ -1166,8 +1170,50 @@ export default function AttackPathApp() {
     download("model.threagile.yaml", yaml, "text/yaml");
   }, [nodes, edges]);
 
-  const saveModel = useCallback(() => { try { trackEvent("AttackPath", "Save", "Model"); const otm = buildOtmFromGraph(nodes as any, edges as any, "Model"); download("model.save.json", JSON.stringify(otm, null, 2), "application/json"); } catch {} }, [nodes, edges]);
   const closeDiagram = useCallback(() => { setNodes([] as any); setEdges([] as any); }, []);
+
+  // --- Diagram persistence: remote-first, local fallback ---
+  function getApPayload() {
+    return { nodes: nodes as any[], edges: edges as any[], metadata: { idSeq } };
+  }
+  function saveToLocal() {
+    const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
+    download("model.save.json", JSON.stringify(otm, null, 2), "application/json");
+  }
+  async function handleSave(name: string) {
+    trackEvent("AttackPath", "Save", "Model");
+    const payload = getApPayload();
+    try {
+      if (diagramStorage.currentDiagramId) {
+        const ok = await diagramStorage.updateDiagram(diagramStorage.currentDiagramId, name, payload);
+        if (ok) { setDiagramManagerOpen(false); return; }
+      } else {
+        const id = await diagramStorage.saveDiagram(name, payload);
+        if (id) { setDiagramManagerOpen(false); return; }
+      }
+      // Remote failed — fall back to local
+      saveToLocal();
+      setDiagramManagerOpen(false);
+    } catch {
+      saveToLocal();
+      setDiagramManagerOpen(false);
+    }
+  }
+  async function handleLoad(id: string) {
+    const data = await diagramStorage.loadDiagram(id);
+    if (!data) return;
+    setNodes(data.nodes as any);
+    setEdges(data.edges as any);
+    if (data.metadata?.idSeq) setIdSeq(data.metadata.idSeq);
+    else setIdSeq(computeNextIdSeq(data.nodes as any));
+    setHistory([]); setFuture([]);
+    setDiagramManagerOpen(false);
+    trackEvent("AttackPath", "Load", id);
+  }
+  async function handleDelete(id: string) {
+    await diagramStorage.deleteDiagram(id);
+    diagramStorage.refreshList();
+  }
 
   const showShortcuts = useCallback(() => {
     try {
@@ -1354,6 +1400,7 @@ export default function AttackPathApp() {
   }, []);
 
   return (
+  <>
     <div className="app" style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <WelcomeModal
         open={showWelcome}
@@ -1392,7 +1439,8 @@ export default function AttackPathApp() {
                     <Bot size={16} />
                   </button>
                   <span style={{ width: 8 }} />
-                  <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
+                  <button title="Save" onClick={() => setDiagramManagerOpen("save")} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
+                  <button title="Load" onClick={() => setDiagramManagerOpen("open")} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><FolderOpen size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Load</span></button>
                 </div>
               </div>
               <ReactFlow
@@ -1626,6 +1674,23 @@ export default function AttackPathApp() {
       </div>
     </div>
   </div>
+  {diagramManagerOpen && (
+    <DiagramManager
+      open={!!diagramManagerOpen}
+      mode={diagramManagerOpen as "save" | "open"}
+      onClose={() => setDiagramManagerOpen(false)}
+      diagrams={diagramStorage.diagrams}
+      loading={diagramStorage.loading}
+      currentDiagramId={diagramStorage.currentDiagramId}
+      currentDiagramName={diagramStorage.currentDiagramName}
+      onRefresh={diagramStorage.refreshList}
+      onSave={handleSave}
+      onUpdate={(id, name) => handleSave(name)}
+      onLoad={handleLoad}
+      onDelete={handleDelete}
+    />
+  )}
+  </>
   );
 }
 

@@ -9,12 +9,13 @@ import os
 import json
 import re
 import time
+import uuid
 import logging
 from contextlib import asynccontextmanager
 
 import httpx
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client
@@ -647,4 +648,98 @@ async def put_llm_settings(request: Request, body: LlmSettingsBody):
         "updated_at": now,
     }).execute()
     return {"ok": True, "updatedAt": now}
+
+
+# ---------- Supabase-backed Diagram Persistence ----------
+
+class DiagramBody(BaseModel):
+    name: str = "Untitled"
+    diagramType: str  # "attack_path" or "threat_model"
+    nodes: List[Dict[str, Any]]
+    edges: List[Dict[str, Any]]
+    metadata: Dict[str, Any] = {}
+
+
+@app.post("/diagrams")
+async def create_diagram(request: Request, body: DiagramBody):
+    user_id = await get_current_user_id(request)
+    now = int(time.time())
+    diagram_id = str(uuid.uuid4())
+    sb = _get_supabase()
+    sb.table("diagrams").insert({
+        "id": diagram_id,
+        "user_id": user_id,
+        "name": body.name,
+        "diagram_type": body.diagramType,
+        "nodes": body.nodes,
+        "edges": body.edges,
+        "metadata": body.metadata,
+        "created_at": now,
+        "updated_at": now,
+    }).execute()
+    return {"ok": True, "id": diagram_id, "createdAt": now}
+
+
+@app.get("/diagrams")
+async def list_diagrams(request: Request, type: str | None = None):
+    user_id = await get_current_user_id(request)
+    sb = _get_supabase()
+    q = sb.table("diagrams").select(
+        "id, name, diagram_type, created_at, updated_at"
+    ).eq("user_id", user_id)
+    if type:
+        q = q.eq("diagram_type", type)
+    q = q.order("updated_at", desc=True).limit(100)
+    result = q.execute()
+    return {"ok": True, "diagrams": result.data or []}
+
+
+@app.get("/diagrams/{diagram_id}")
+async def get_diagram(request: Request, diagram_id: str):
+    user_id = await get_current_user_id(request)
+    sb = _get_supabase()
+    result = sb.table("diagrams").select("*").eq("id", diagram_id).eq("user_id", user_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Diagram not found")
+    row = result.data[0]
+    return {
+        "ok": True,
+        "id": row["id"],
+        "name": row["name"],
+        "diagramType": row["diagram_type"],
+        "nodes": row["nodes"],
+        "edges": row["edges"],
+        "metadata": row["metadata"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+@app.put("/diagrams/{diagram_id}")
+async def update_diagram(request: Request, diagram_id: str, body: DiagramBody):
+    user_id = await get_current_user_id(request)
+    now = int(time.time())
+    sb = _get_supabase()
+    existing = sb.table("diagrams").select("id").eq("id", diagram_id).eq("user_id", user_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Diagram not found")
+    sb.table("diagrams").update({
+        "name": body.name,
+        "nodes": body.nodes,
+        "edges": body.edges,
+        "metadata": body.metadata,
+        "updated_at": now,
+    }).eq("id", diagram_id).eq("user_id", user_id).execute()
+    return {"ok": True, "updatedAt": now}
+
+
+@app.delete("/diagrams/{diagram_id}")
+async def delete_diagram(request: Request, diagram_id: str):
+    user_id = await get_current_user_id(request)
+    sb = _get_supabase()
+    existing = sb.table("diagrams").select("id").eq("id", diagram_id).eq("user_id", user_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Diagram not found")
+    sb.table("diagrams").delete().eq("id", diagram_id).eq("user_id", user_id).execute()
+    return {"ok": True}
 

@@ -26,9 +26,11 @@ import ActorNode from "./nodes/ActorNode";
 import ProcessNode from "./nodes/ProcessNode";
 import StoreNode from "./nodes/StoreNode";
 import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
-import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon, Upload, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { ChevronRight, User, Globe, Server, Mail, Shield, Database as DbIcon, Box, Timer, Bot, Download as DownloadIcon, X, Trash, Keyboard, Undo2, Redo2, Grid as GridIcon, Save as SaveIcon, Upload, RefreshCw, RotateCcw, Search, FolderOpen } from "lucide-react";
 import { useLlmSettings } from "./hooks/useLlmSettings";
 import { useAuthFetch } from "./hooks/useAuthFetch";
+import { useDiagramStorage } from "./hooks/useDiagramStorage";
+import DiagramManager from "./components/DiagramManager";
 
 type BasicNodeData = { label: string; technology?: string } & Record<string, any>;
 
@@ -97,6 +99,8 @@ export default function ThreatModelingApp() {
     saveLlmSettings, hydrated: settingsHydrated,
   } = useLlmSettings();
   const authFetch = useAuthFetch();
+  const diagramStorage = useDiagramStorage("threat_model");
+  const [diagramManagerOpen, setDiagramManagerOpen] = useState<false | "save" | "open">(false);
   const [llmRisks, setLlmRisks] = useState<Array<any> | null>(null);
   const [risksLoading, setRisksLoading] = useState<boolean>(false);
   const [acceptedFindings, setAcceptedFindings] = useState<Array<any>>(() => {
@@ -468,19 +472,55 @@ export default function ThreatModelingApp() {
 
   const closeDiagram = useCallback(() => { setNodes([] as any); setEdges([] as any); }, []);
 
-  const saveModel = useCallback(() => {
+  // --- Diagram persistence: remote-first, local fallback ---
+  function getTmPayload() {
+    return { nodes: nodes as any[], edges: edges as any[], metadata: { idSeq, findings: acceptedFindings } };
+  }
+  function saveToLocal() {
+    const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
+    const blob = new Blob([JSON.stringify(otm, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "model.save.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  async function handleSave(name: string) {
+    trackEvent("ThreatModeling", "Save", "Model");
+    const payload = getTmPayload();
     try {
-      trackEvent("ThreatModeling", "Save", "Model");
-      const otm = buildOtmFromGraph(nodes as any, edges as any, "Model");
-      const blob = new Blob([JSON.stringify(otm, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "model.save.json";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {}
-  }, [nodes, edges]);
+      if (diagramStorage.currentDiagramId) {
+        const ok = await diagramStorage.updateDiagram(diagramStorage.currentDiagramId, name, payload);
+        if (ok) { setDiagramManagerOpen(false); return; }
+      } else {
+        const id = await diagramStorage.saveDiagram(name, payload);
+        if (id) { setDiagramManagerOpen(false); return; }
+      }
+      saveToLocal();
+      setDiagramManagerOpen(false);
+    } catch {
+      saveToLocal();
+      setDiagramManagerOpen(false);
+    }
+  }
+  async function handleLoad(id: string) {
+    const data = await diagramStorage.loadDiagram(id);
+    if (!data) return;
+    const mapped = (data.nodes as any[]).map((n: any) => ({ ...n, zIndex: n.type === "trustBoundary" ? 0 : 1 }));
+    setNodes(mapped as any);
+    setEdges(data.edges as any);
+    if (data.metadata?.idSeq) setIdSeq(data.metadata.idSeq);
+    else setIdSeq(computeNextIdSeq(mapped as any));
+    if (data.metadata?.findings) setAcceptedFindings(data.metadata.findings);
+    setHistory([]); setFuture([]);
+    setDiagramManagerOpen(false);
+    trackEvent("ThreatModeling", "Load", id);
+  }
+  async function handleDelete(id: string) {
+    await diagramStorage.deleteDiagram(id);
+    diagramStorage.refreshList();
+  }
 
   const showShortcuts = useCallback(() => {
     try { alert("Shortcuts:\n- Delete: remove selection\n- Right click: context menu\n- Drag between handles: connect nodes"); } catch {}
@@ -912,6 +952,7 @@ export default function ThreatModelingApp() {
   }, [edges, focusedNodeIds]);
 
   return (
+  <>
     <div className="app" style={{ height: "100%", display: "flex", overflow: "hidden" }}>
       <WelcomeModal
         open={showWelcome}
@@ -974,7 +1015,8 @@ export default function ThreatModelingApp() {
                   <button title="Export Threagile" onClick={exportThreagile} style={footerButtonStyle}><DownloadIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Threagile</span></button>
                   <button title="AI" onClick={() => window.dispatchEvent(new CustomEvent("ap-menu", { detail: { key: "llm" } }))} style={footerButtonStyle}><Bot size={16} /></button>
                   <span style={{ width: 8 }} />
-                  <button title="Save" onClick={saveModel} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
+                  <button title="Save" onClick={() => setDiagramManagerOpen("save")} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><SaveIcon size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Save</span></button>
+                  <button title="Load" onClick={() => setDiagramManagerOpen("open")} style={{ ...footerButtonStyle, borderColor: "#2563eb", color: "#2563eb" }}><FolderOpen size={16} /><span style={{ marginLeft: 6, fontSize: 12 }}>Load</span></button>
                 </div>
               </div>
               <input ref={threagileInputRef} type="file" accept=".yaml,.yml" style={{ display: "none" }} onChange={onThreagileImportChange} />
@@ -1058,6 +1100,23 @@ export default function ThreatModelingApp() {
         </div>
       </div>
     </div>
+    {diagramManagerOpen && (
+      <DiagramManager
+        open={!!diagramManagerOpen}
+        mode={diagramManagerOpen as "save" | "open"}
+        onClose={() => setDiagramManagerOpen(false)}
+        diagrams={diagramStorage.diagrams}
+        loading={diagramStorage.loading}
+        currentDiagramId={diagramStorage.currentDiagramId}
+        currentDiagramName={diagramStorage.currentDiagramName}
+        onRefresh={diagramStorage.refreshList}
+        onSave={handleSave}
+        onUpdate={(id, name) => handleSave(name)}
+        onLoad={handleLoad}
+        onDelete={handleDelete}
+      />
+    )}
+  </>
   );
 }
 
