@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 from typing import Any, Dict, List
+import asyncio
 import os
 import json
 import re
@@ -29,9 +30,37 @@ from .llm.templates import (
     build_tm_risks_schema,
     default_tm_risks_user_prompt,
 )
+_KEEPALIVE_INTERVAL_SECONDS = 6 * 60 * 60
+
+
+async def _supabase_keepalive_loop():
+    while True:
+        try:
+            if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+                sb = _get_supabase()
+                result = await asyncio.to_thread(
+                    lambda: sb.table("llm_settings")
+                    .select("user_id", count="exact")
+                    .limit(1)
+                    .execute()
+                )
+                logger.info("supabase keepalive ok count=%s", getattr(result, "count", None))
+        except Exception as exc:
+            logger.warning("supabase keepalive failed: %s", exc)
+        await asyncio.sleep(_KEEPALIVE_INTERVAL_SECONDS)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    yield
+    task = asyncio.create_task(_supabase_keepalive_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 app = FastAPI(title="Nextgen TM Server", lifespan=lifespan)
